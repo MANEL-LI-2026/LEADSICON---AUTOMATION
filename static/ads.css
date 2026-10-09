@@ -1,0 +1,12 @@
+.ads-content{display:grid;gap:24px;min-width:0}
+.ads-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:20px}
+.ads-actions .primary{flex-shrink:0}
+#actor-input{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.results-status{display:flex;align-items:flex-start;gap:10px;background:#f8f8fc;border:1px solid #ececf5;border-radius:9px;padding:15px}
+.results-status .dot{flex-shrink:0;margin-top:8px}
+.results-status p{margin:0;font-size:12px;color:#73788f;overflow-wrap:anywhere}
+#results{white-space:pre-wrap;overflow-wrap:anywhere;max-height:480px;overflow:auto;color:#53596e;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}
+#results:empty{display:none}
+.studio-link{display:block;text-align:center}
+@media(max-width:800px){.ads-page .topbar>span{max-width:45%;line-height:1.7}.ads-page .topbar>div{gap:12px}}
+@media(max-width:480px){.ads-page nav a:first-child{display:block}.ads-page nav a{font-size:9px;padding:8px 6px}.ads-page .page-heading>.outline{display:inline-block}.ads-actions{align-items:flex-start;flex-direction:column}.ads-actions .primary{width:100%}}
