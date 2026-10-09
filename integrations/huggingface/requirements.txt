@@ -1,0 +1,14 @@
+# Install only in the dedicated GPU endpoint, never in the Render web/worker.
+torch==2.6.0
+torchaudio==2.6.0
+transformers==4.51.3
+huggingface-hub==0.30.2
+accelerate==1.6.0
+pyannote.audio==3.3.2
+pyannote.core>=5,<6
+pyannote.database>=5,<6
+pyannote.metrics>=3,<4
+numpy==1.26.4
+soundfile==0.13.1
+Pillow==11.2.1
+imageio-ffmpeg==0.6.0

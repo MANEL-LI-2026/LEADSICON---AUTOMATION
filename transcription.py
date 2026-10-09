@@ -17,7 +17,17 @@ class TranscriptionUnavailable(RuntimeError):
     pass
 
 
+def provider_name():
+    selected = os.environ.get("TRANSCRIPTION_PROVIDER", "huggingface" if os.environ.get("HF_TRANSCRIPTION_ENDPOINT") else "kie").strip().lower()
+    if selected not in ("kie", "huggingface"):
+        raise TranscriptionUnavailable("TRANSCRIPTION_PROVIDER debe ser kie o huggingface.")
+    return selected
+
+
 def configured():
+    if provider_name() == "huggingface":
+        from hf_transcription import configured as hf_configured
+        return hf_configured()
     return bool(os.environ.get('KIE_API_KEY')) and os.environ.get('KIE_TRANSCRIPTION_ENABLED', '1') == '1'
 
 
@@ -89,7 +99,7 @@ def upload_video(path, token):
         raise TranscriptionUnavailable('Kie no confirmó una URL de video temporal válida.') from None
 
 
-def transcribe_video(path):
+def transcribe_kie_video(path):
     if not configured():
         raise TranscriptionUnavailable('Configura KIE_API_KEY en el worker para transcribir automáticamente. KIE_TRANSCRIPTION_ENABLED=0 desactiva el análisis.')
     token = os.environ['KIE_API_KEY']
@@ -133,3 +143,20 @@ def transcribe_video(path):
         return speech, scenes
     except (KeyError, IndexError, ValueError, TypeError):
         raise TranscriptionUnavailable('Kie no devolvió una transcripción completa con tiempos y escenas válidos. No se guardó un resultado inventado; revisa el consumo antes de reintentar.') from None
+
+
+def analysis_origin(asset_id):
+    return ('hf:whisper-pyannote-vlm:' if provider_name() == 'huggingface' else 'kie:' + MODEL + ':') + asset_id
+
+
+def configuration_issue():
+    if provider_name() == 'huggingface':
+        return 'Configura HF_TOKEN y HF_TRANSCRIPTION_ENDPOINT en el worker para transcribir, separar hablantes y describir escenas.'
+    return 'Configura KIE_API_KEY en el worker para transcribir automáticamente. KIE_TRANSCRIPTION_ENABLED=0 desactiva el análisis.'
+
+
+def transcribe_video(path):
+    if provider_name() == 'huggingface':
+        from hf_transcription import transcribe_video as hf_transcribe
+        return hf_transcribe(path)
+    return transcribe_kie_video(path)

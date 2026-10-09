@@ -31,6 +31,14 @@ const {chromium}=require('playwright');
  await page.getByRole('button',{name:'Guardar transcripciones',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#transcript-status').textContent.includes('Versión 1 guardada'));
  await page.getByRole('button',{name:'◎ Voz',exact:true}).click();if(!(await page.locator('#transcript-timeline').textContent()).includes('VoiceOver'))throw Error('missing speaker roles');
  await page.getByRole('button',{name:'▣ Escenas',exact:true}).click();if(!(await page.locator('#transcript-timeline').textContent()).includes('interior del auto'))throw Error('missing scenes');
+ // Render the HF provider badge using a simulated analysis history, without a live GPU.
+ await page.route('**/api/library/ads/*/transcripts',async route=>{
+   const response=await route.fetch();const data=await response.json();
+   data.items=data.items.map(item=>({...item,origin:'hf:whisper-pyannote-vlm:fixture'}));
+   await route.fulfill({response,body:JSON.stringify(data)});
+ });
+ await page.locator('#refresh-detail').click();
+ await page.waitForFunction(()=>document.querySelector('#automatic-status').textContent.includes('Hugging Face'));
  // A polling refresh must preserve unsaved corrections.
  await page.locator('#speech-rows [data-field=text]').fill('Unsaved correction');await page.locator('#refresh-detail').click();await page.waitForTimeout(500);if(await page.locator('#speech-rows [data-field=text]').inputValue()!=='Unsaved correction')throw Error('poll overwrote editing');
  await page.reload();await page.waitForFunction(()=>document.querySelector('#transcript-version').options[0].textContent.includes('Versión 1'));

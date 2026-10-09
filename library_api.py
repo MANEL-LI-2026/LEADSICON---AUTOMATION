@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from library_store import Ad, Asset, Integration, LibraryStore, Transcript, Run, Job
 from drive_client import DriveClient, DriveUnavailable, connect, oauth_config
+from transcription import TranscriptionUnavailable
 
 
 class LibraryUnavailable(RuntimeError):
@@ -98,6 +99,7 @@ def register_library(app):
 
     @app.errorhandler(LibraryUnavailable)
     @app.errorhandler(DriveUnavailable)
+    @app.errorhandler(TranscriptionUnavailable)
     def unavailable(error):
         return jsonify(error=str(error)), 503
 
@@ -144,8 +146,8 @@ def register_library(app):
         if configured:
             with store().session() as db:
                 connected = db.get(Integration, 'google-drive') is not None
-        from transcription import configured as transcription_configured
-        return jsonify(databaseConfigured=configured, driveConnected=connected, transcriptionProviderConfigured=transcription_configured())
+        from transcription import configured as transcription_configured, provider_name
+        return jsonify(databaseConfigured=configured, driveConnected=connected, transcriptionProviderConfigured=transcription_configured(), transcriptionProvider=provider_name())
 
     @app.post('/api/library/ads')
     def library_save():

@@ -208,7 +208,7 @@ class LibraryStore:
         return {'id': transcript.id, 'version': transcript.version, 'speech': transcript.speech,
                 'scenes': transcript.scenes, 'reviewed': transcript.reviewed, 'origin': transcript.origin,
                 'createdAt': transcript.created_at, 'driveUrl': transcript.drive_url,
-                'sourceAssetId': transcript.origin.rsplit(':', 1)[-1] if transcript.origin.startswith(('kie:', 'manual:')) else None}
+                'sourceAssetId': transcript.origin.rsplit(':', 1)[-1] if transcript.origin.startswith(('kie:', 'hf:', 'manual:')) else None}
 
     def list_ads(self, liked_only=False, limit=50, offset=0):
         with self.session() as db:

@@ -40,7 +40,7 @@
       versions = history.items;
       const selector = document.querySelector('#transcript-version'); selector.replaceChildren();
       for (const transcript of versions) {
-        const option = node('option', `Versión ${transcript.version} · ${transcript.origin.startsWith('kie:') ? 'IA · Kie / Gemini' : 'Revisión manual'}${transcript.reviewed ? ' · Revisada' : ''}`); option.value = transcript.id; selector.append(option);
+        const option = node('option', `Versión ${transcript.version} · ${transcript.origin.startsWith('hf:') ? 'IA · Hugging Face' : transcript.origin.startsWith('kie:') ? 'IA · Kie / Gemini' : 'Revisión manual'}${transcript.reviewed ? ' · Revisada' : ''}`); option.value = transcript.id; selector.append(option);
       }
       if (!versions.length) selector.append(node('option', 'Esperando transcripción'));
       if (!versions.some(version => version.id === selectedVersion)) selectedVersion = versions[0]?.id || null;
@@ -63,7 +63,7 @@
       const jobs = document.querySelector('#job-list'); jobs.replaceChildren();
       for (const job of item.jobs) jobs.append(node('li', `${kinds[job.kind] || job.kind}: ${states[job.status] || job.status}${job.error ? ' · ' + job.error : ''}`));
       if (!item.jobs.length) jobs.append(node('li', 'Sin tareas de archivos en cola.'));
-      status.textContent = item.transcript ? `Transcripción versión ${item.transcript.version} · ${item.transcript.reviewed ? 'Revisada' : 'Pendiente de revisión'}.` : 'Transcripción automática pendiente. Revisa el estado del worker y la configuración de Kie.';
+      status.textContent = item.transcript ? `Transcripción versión ${item.transcript.version} · ${item.transcript.reviewed ? 'Revisada' : 'Pendiente de revisión'}.` : 'Transcripción automática pendiente. Revisa el estado del worker y la configuración del proveedor de transcripción.';
       document.querySelector('#editing-version').textContent = item.transcript ? `Corrección de la última versión guardada (${item.transcript.version}). El selector superior permite consultar las anteriores.` : 'La transcripción aparecerá automáticamente; las correcciones son opcionales.';
       if (!dirty && editorVersion !== (item.transcript?.version || 0)) {
         document.querySelector('#speech-rows').replaceChildren(); document.querySelector('#scene-rows').replaceChildren();
@@ -107,7 +107,7 @@
       automaticStatus.textContent = issue?.error || 'La transcripción aparecerá aquí automáticamente cuando el worker termine. No necesitas escribirla.';
       timeline.append(node('p', 'Aún no hay segmentos disponibles.', 'hint')); return;
     }
-    automaticStatus.textContent = transcript.origin.startsWith('kie:') ? 'Transcripción automática · Kie / Gemini · ' + (transcript.reviewed ? 'Revisada por el equipo' : 'Pendiente de revisión') : 'Transcripción revisada o escrita por el equipo.';
+    automaticStatus.textContent = transcript.origin.startsWith('hf:') || transcript.origin.startsWith('kie:') ? 'Transcripción automática · ' + (transcript.origin.startsWith('hf:') ? 'Hugging Face · ' : 'Kie / Gemini · ') + (transcript.reviewed ? 'Revisada por el equipo' : 'Pendiente de revisión') : 'Transcripción revisada o escrita por el equipo.';
     const segments = transcript[layer] || [];
     if (!segments.length) timeline.append(node('p', layer === 'speech' ? 'No se detectó voz en esta versión.' : 'No hay escenas en esta versión.', 'hint'));
     for (const segment of segments) {

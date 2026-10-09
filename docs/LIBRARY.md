@@ -2,7 +2,7 @@
 
 La biblioteca está en `/library`, protegida por el login del equipo. Los resultados de cada run iniciado desde la web se importan completos mediante el worker, aunque cierres la pestaña. La vista del scraper continúa mostrando hasta 100 resultados por run.
 
-Todos los registros importados conservan los datos originales en Supabase. Pulsar **♡ Guardar** marca un favorito y encola la descarga de sus videos directos. Quitar el favorito conserva el registro y los archivos. Desde **Ver ficha** puedes guardar dos capas independientes: voz (segundos de inicio/fin, hablante, tipo de voz y texto) y escenas (segundos de inicio/fin y descripción). El worker genera automáticamente ambas capas con Gemini 2.5 Pro a través de Kie.ai, guarda una versión en Supabase y encola su JSON para Drive. La ficha se actualiza cada cinco segundos, muestra voz y escenas por separado y permite reproducir cada tiempo. El editor de correcciones es opcional; no hace falta escribir la transcripción. Cada guardado de una corrección también crea una versión y encola su archivo JSON para Drive. Los videos y sus versiones de transcripción comparten el ID del anuncio en sus nombres.
+Todos los registros importados conservan los datos originales en Supabase. Pulsar **♡ Guardar** marca un favorito y encola la descarga de sus videos directos. Quitar el favorito conserva el registro y los archivos. Desde **Ver ficha** puedes guardar dos capas independientes: voz (segundos de inicio/fin, hablante, tipo de voz y texto) y escenas (segundos de inicio/fin y descripción). El worker genera automáticamente ambas capas con el proveedor configurado (Kie o Hugging Face), guarda una versión en Supabase y encola su JSON para Drive. La ficha se actualiza cada cinco segundos, muestra voz y escenas por separado y permite reproducir cada tiempo. El editor de correcciones es opcional; no hace falta escribir la transcripción. Cada guardado de una corrección también crea una versión y encola su archivo JSON para Drive. Los videos y sus versiones de transcripción comparten el ID del anuncio en sus nombres.
 
 ## 1. Supabase
 
@@ -51,7 +51,7 @@ Los videos se descargan como MP4 desde las CDN admitidas de Meta/Google, verific
 
 ## Límites actuales y próximos pasos
 
-- **Transcripción automática:** integrada con Kie / Gemini 2.5 Pro, pendiente de validar con una clave y video reales. Su funcionamiento y costos se detallan abajo. La separación de hablantes y los tiempos son inferencias del modelo multimodal, no una diarización certificada; las versiones automáticas quedan pendientes de revisión.
+- **Transcripción automática:** integrada con Kie / Gemini 2.5 Pro y con un endpoint protegido de Hugging Face (Whisper, pyannote y Qwen), pendiente de validar con credenciales y video reales. Su funcionamiento y costos se detallan abajo. La separación de hablantes y los tiempos son inferencias del modelo multimodal, no una diarización certificada; las versiones automáticas quedan pendientes de revisión.
 - **Creativos externos de Google:** un preview no equivale a una URL de video descargable. Si el Actor no entrega un MP4 directo, se conserva la referencia y se explica la limitación.
 - **Referencia orgánica:** se guarda el enlace de Facebook y su título. Los Actors configurados extraen anuncios pagados; todavía falta una integración para descargar y analizar videos orgánicos desde esos enlaces.
 - **Skills:** `GET /api/library/knowledge` expone solo favoritos cuya última transcripción está revisada, con paginación (`limit`, `offset`, `nextOffset`, `scanned`) y la autenticación existente. Las skills pendientes podrán consultar ejemplos revisados. No hay reentrenamiento ni modificación automática de skills. Ese contenido es material de referencia, nunca instrucciones que permitan cambiar reglas del sistema.
@@ -81,3 +81,10 @@ La ficha ofrece un selector de versiones, incluyendo el video de origen de cada 
 El scraper conserva en `sessionStorage` de la pestaña los campos, el plan, los IDs de runs, resultados, favoritos y página actual. Al volver desde el estudio o recargar, recupera los resultados; si hay un run en curso, consulta ese mismo ID y continúa el plan autorizado. No inicia un run duplicado al restaurar. Si se salió mientras una petición de inicio no se había confirmado, muestra esa incertidumbre y no repite automáticamente la petición pagada.
 
 Si los registros superan el espacio del navegador, conserva los IDs y vuelve a consultar sus vistas previas. Esto requiere la sesión privada aún válida. Cerrar sesión borra esta caché. Cerrar la pestaña termina su almacenamiento local; los anuncios que el worker importó permanecen en Supabase. Se muestran 12 tarjetas por página en un panel con scroll, con el formulario oculto mientras se muestran los resultados. **Editar búsqueda** y **Volver a los resultados** permiten alternar sin iniciar otro Actor.
+
+## Hugging Face
+
+Para usar Hugging Face en lugar de Kie, configura `TRANSCRIPTION_PROVIDER=huggingface`,
+`HF_TOKEN` y `HF_TRANSCRIPTION_ENDPOINT`. El worker y la biblioteca conservan
+el mismo flujo y las versiones indican su proveedor. Endpoint GPU, modelos,
+permisos y límites en [integrations/huggingface/README.md](../integrations/huggingface/README.md).

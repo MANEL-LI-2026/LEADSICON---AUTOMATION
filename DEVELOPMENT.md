@@ -118,3 +118,8 @@ temporal y credenciales ficticias. Simula Apify: no inicia Actors reales.
 Verifica restauración de búsqueda en curso al navegar, paginación, ausencia de
 runs duplicados, favoritos, transcripciones, correcciones y modos claro/oscuro
 en móvil. Guarda capturas en `/tmp/leadsicon-search-*.png`.
+
+Hugging Face está disponible como proveedor de transcripción, diarización y
+descripciones visuales mediante un endpoint GPU protegido. Guía y handler en
+[integrations/huggingface/README.md](integrations/huggingface/README.md). Sus
+dependencias están separadas: no se instalan en el backend de Render.

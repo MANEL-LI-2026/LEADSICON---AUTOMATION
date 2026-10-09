@@ -19,6 +19,8 @@ class LibraryTests(unittest.TestCase):
         cls.password_hash = generate_password_hash('test-password')
 
     def setUp(self):
+        provider_env = patch.dict(os.environ, {'TRANSCRIPTION_PROVIDER': 'kie', 'HF_TRANSCRIPTION_ENDPOINT': '', 'HF_TOKEN': ''})
+        provider_env.start(); self.addCleanup(provider_env.stop)
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.url = 'sqlite:///' + self.directory.name + '/library.db'

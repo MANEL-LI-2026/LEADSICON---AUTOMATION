@@ -13,7 +13,7 @@ from sqlalchemy import select
 from library_store import Asset, LibraryStore, Transcript, Job
 from drive_client import DriveClient, DriveUnavailable
 from scraper import ApifyClient
-from transcription import transcribe_video, TranscriptionUnavailable, MODEL
+from transcription import transcribe_video, TranscriptionUnavailable, MODEL, analysis_origin, configuration_issue
 
 
 class Blocked(RuntimeError):
@@ -149,7 +149,7 @@ def process_job(store, job):
             transcript = db.get(Transcript, payload['transcript_id'])
             transcript.drive_file_id, transcript.drive_url = result['id'], result.get('webViewLink') or 'https://drive.google.com/file/d/' + result['id'] + '/view'
     elif job['kind'] == 'transcribe':
-        origin = 'kie:' + MODEL + ':' + payload['asset_id']
+        origin = analysis_origin(payload['asset_id'])
         with store.session() as db:
             if db.scalar(select(Transcript.id).where(Transcript.ad_id == payload['ad_id'], Transcript.origin == origin)):
                 return True  # A saved analysis is never charged again on a recovered job.
@@ -159,7 +159,7 @@ def process_job(store, job):
             path, source_url, file_id = asset.local_path, asset.source_url, asset.drive_file_id
         from transcription import configured
         if not configured():
-            raise TranscriptionUnavailable('Configura KIE_API_KEY en el worker para transcribir automáticamente. KIE_TRANSCRIPTION_ENABLED=0 desactiva el análisis.')
+            raise TranscriptionUnavailable(configuration_issue())
         if not path or not Path(path).is_file():
             if file_id:
                 path = str(media_dir() / (payload['asset_id'] + '.mp4'))
@@ -203,7 +203,7 @@ def resume_configured_transcriptions(store):
     with store.session.begin() as db:
         jobs = db.scalars(select(Job).where(Job.kind == 'transcribe', Job.status == 'blocked')).all()
         for job in jobs:
-            if job.error and (job.error.startswith('Configura KIE_API_KEY') or job.error.startswith('Proveedor de transcripción de voz')):
+            if job.error and (job.error.startswith(('Configura KIE_API_KEY', 'Configura HF_TOKEN', 'Proveedor de transcripción de voz'))):
                 job.status, job.error, job.available_at = 'pending', None, 0
 
 

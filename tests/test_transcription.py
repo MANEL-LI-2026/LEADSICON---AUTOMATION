@@ -17,6 +17,10 @@ SCENES = [{'start': 0, 'end': 4, 'description': 'Persona en cámara dentro de un
 
 
 class TranscriptionTests(unittest.TestCase):
+    def setUp(self):
+        provider_env = patch.dict(os.environ, {'TRANSCRIPTION_PROVIDER': 'kie', 'HF_TRANSCRIPTION_ENDPOINT': '', 'HF_TOKEN': ''})
+        provider_env.start(); self.addCleanup(provider_env.stop)
+
     def test_kie_contract_video_input_and_structured_response(self):
         response = {'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps({'speech': SPEECH, 'scenes': SCENES})}}]}
         with patch.dict(os.environ, {'KIE_API_KEY': 'test-secret', 'KIE_TRANSCRIPTION_ENABLED': '1'}), patch('transcription.upload_video', return_value='https://tempfile.redpandaai.co/video.mp4'), patch('transcription.provider_json', return_value=response) as provider:
