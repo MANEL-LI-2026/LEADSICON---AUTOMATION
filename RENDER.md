@@ -35,11 +35,10 @@ La web puede arrancar sin Apify. Para habilitar búsquedas, añade en la secció
 | Variable | Valor |
 | --- | --- |
 | `APIFY_TOKEN` | Token privado de tu cuenta de Apify |
-| `APIFY_FACEBOOK_ACTOR` | ID o nombre `usuario/actor` del Actor elegido |
-| `APIFY_YOUTUBE_ACTOR` | ID o nombre `usuario/actor` del Actor elegido |
+
 
 No compartas el token ni la contraseña en el chat o en el repositorio.
-La elección de Actors y una extracción real siguen pendientes. Cada ejecución
+Los dos Actors ya están fijados en el código (ver `APIFY.md`); la extracción real sigue pendiente. Cada ejecución
 puede consumir crédito de Apify.
 
 ## Actualizaciones

@@ -12,6 +12,7 @@ from werkzeug.security import check_password_hash
 
 from scraper import ApifyClient
 from kie import chat_models, complete
+from ad_inputs import ACTORS, search_plan
 
 
 def create_app(config=None):
@@ -93,9 +94,16 @@ def create_app(config=None):
     @app.get("/ads")
     def ads():
         return render_template("index.html", configured={
-            p: bool(os.environ.get("APIFY_TOKEN") and os.environ.get(f"APIFY_{p.upper()}_ACTOR"))
+            p: bool(os.environ.get("APIFY_TOKEN"))
             for p in ("facebook", "youtube")
-        })
+        }, actors=ACTORS)
+
+    @app.post("/api/scraper/plan")
+    def scraper_plan():
+        try:
+            return jsonify(search_plan(request.get_json(silent=True)))
+        except (ValueError, TypeError) as exc:
+            return jsonify(error=str(exc)), 400
 
     @app.get("/chat")
     def chat():
@@ -155,10 +163,10 @@ def create_app(config=None):
         if not isinstance(body.get("input"), dict):
             return jsonify(error="El input del Actor debe ser un objeto JSON."), 400
         platform = body["platform"]
-        actor = os.environ.get(f"APIFY_{platform.upper()}_ACTOR")
+        actor = ACTORS[platform]
         token = os.environ.get("APIFY_TOKEN")
-        if not actor or not token:
-            return jsonify(error="Falta configurar el Actor o el token de Apify en el servidor."), 503
+        if not token:
+            return jsonify(error="Configura APIFY_TOKEN en los secretos de Render."), 503
         try:
             run = ApifyClient(token).request(
                 f"acts/{quote(actor.replace('/', '~'), safe='')}/runs", body["input"]

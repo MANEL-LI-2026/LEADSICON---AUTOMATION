@@ -71,6 +71,7 @@ class WebTests(unittest.TestCase):
             self.assertEqual(self.client.get("/api/runs/r1").json["items"], [{"ad": "example"}])
             self.assertEqual(self.client.get("/api/runs/other").status_code, 404)
             self.assertEqual(request.call_count, 3)
+            self.assertEqual(request.call_args_list[0].args[0], "acts/JJghSZmShuco4j9gJ/runs")
 
     def test_secure_cookie_default_and_missing_config(self):
         app = create_app({"SECRET_KEY": "test", "PASSWORD_HASH": self.password_hash, "SESSION_COOKIE_SECURE": True})

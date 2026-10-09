@@ -9,6 +9,7 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
+from ad_inputs import ACTORS
 
 
 class ApifyClient:
@@ -71,9 +72,9 @@ def main():
         parser.error("--timeout debe ser positivo")
     try:
         token = os.environ.get("APIFY_TOKEN")
-        actor = os.environ.get(f"APIFY_{args.platform.upper()}_ACTOR")
+        actor = ACTORS[args.platform]
         if not token or not actor:
-            raise ValueError("Configura APIFY_TOKEN y el Actor de la plataforma elegida.")
+            raise ValueError("Configura APIFY_TOKEN en el entorno.")
         actor_input = json.loads(args.input.read_text())
         if not isinstance(actor_input, dict):
             raise ValueError("El input debe ser un objeto JSON.")

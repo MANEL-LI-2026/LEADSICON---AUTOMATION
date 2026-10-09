@@ -50,9 +50,8 @@ en `127.0.0.1:8000`. No uses esa opción en una web pública. En producción las
 cookies exigen HTTPS. GitHub Pages no ejecuta este backend ni protege el contenido
 con contraseña: despliega la web completa en un proveedor con soporte para Python.
 
-La interfaz permite enviar el input JSON del Actor y ver/descargar hasta 100
-registros. Los formularios específicos por palabra clave y anunciante dependen
-de elegir y verificar los Actors. Las búsquedas siguen activas en Apify aunque
+La interfaz genera el input del Actor desde keywords o anunciantes y permite
+ver/descargar hasta 100 registros por run. Las búsquedas siguen activas en Apify aunque
 cierres la página; no se cancelan automáticamente.
 
 Pruebas de la CLI y de la web:
@@ -64,14 +63,11 @@ Pruebas de la CLI y de la web:
 ## Configuración
 
 Configura `APIFY_TOKEN` de forma segura en el entorno, sin guardarlo en Git.
-Configura `APIFY_FACEBOOK_ACTOR` y `APIFY_YOUTUBE_ACTOR` con los IDs o nombres
-`usuario/actor` de los Actors elegidos. El programa lee variables del proceso;
+Los Actors de Meta y Google están fijados en `ad_inputs.py`; consulta `APIFY.md`. El programa lee variables del proceso;
 no carga archivos `.env` automáticamente.
 
-Los Actors deben obtener anuncios de Meta Ads Library y anuncios de YouTube
-desde una fuente compatible, por ejemplo Google Ads Transparency Center.
-Hay que comprobar la cobertura del Actor: un scraper de videos de YouTube
-no necesariamente obtiene anuncios pagados.
+Los Actors seleccionados obtienen anuncios de Meta Ad Library y Google Ads
+Transparency Center, filtrando YouTube para las búsquedas de esa plataforma.
 
 ## Uso
 
@@ -98,5 +94,5 @@ python3 scraper.py --help
 ```
 
 Las pruebas simulan Apify: no consumen crédito ni verifican Actors reales.
-Pendiente: elegir los Actors, validar sus inputs y hacer una ejecución real
-antes de afirmar que la extracción de anuncios funciona.
+Los inputs de los Actors seleccionados se validaron contra sus esquemas publicados.
+Pendiente: una extracción real con un token válido antes de afirmar que funciona.
