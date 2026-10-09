@@ -80,7 +80,7 @@ $('search').addEventListener('submit', async event => {
         $('status').textContent = `${index + 1}/${prepared.runs.length} · ${query.label} · Run ${run.id}: ${current.status}`;
         if (current.status === 'SUCCEEDED') {
           exportItems.push(...current.items);
-          $('results').textContent = JSON.stringify(exportItems, null, 2);
+          AdResults.render($('results'), exportItems, prepared.platform);
           $('download').hidden = false;
           break;
         }

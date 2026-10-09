@@ -41,6 +41,13 @@ no a toda la tanda. La vista previa muestra hasta 100 registros por run; puede
 contener anuncios repetidos entre consultas. La descarga incluye los registros
 mostrados, sin alterar su formato original.
 
+Los resultados se muestran como tarjetas con anunciante, texto, fechas y enlaces.
+Meta puede incluir imágenes o videos reproducibles. Algunos creativos de Google
+solo incluyen un `previewUrl` externo: se abre con un enlace y no se ejecuta su
+script dentro de la web. Cuando faltan assets o sus URLs dejan de funcionar,
+la tarjeta muestra una indicación y conserva el enlace al anuncio si existe.
+El botón Descargar JSON sigue exportando los registros originales.
+
 Los Actors son de anuncios pagados. Los hashtags orgánicos se conservan en la
 interfaz, pero su ejecución queda deshabilitada hasta elegir un Actor compatible.
 

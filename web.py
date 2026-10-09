@@ -51,7 +51,8 @@ def create_app(config=None):
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+            "default-src 'self'; img-src 'self' https:; media-src 'self' https:; "
+            "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         )
         response.headers["Referrer-Policy"] = "no-referrer"
         if app.config["SESSION_COOKIE_SECURE"]:
