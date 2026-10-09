@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: leadsicon-ads
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers 1 --threads 4 --bind 0.0.0.0:$PORT 'web:create_app()'
+    healthCheckPath: /login
+    autoDeploy: false
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.12
+      - key: WEB_SESSION_SECRET
+        generateValue: true
+      - key: WEB_PASSWORD_HASH
+        sync: false
+      - key: WEB_LOCAL_HTTP
+        value: "0"

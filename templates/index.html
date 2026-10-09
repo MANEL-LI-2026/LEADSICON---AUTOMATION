@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="{{ session.csrf }}"><title>Explorar anuncios · Leadsicon</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body><main><header><p class="brand">LEADSICON / ADS INTELLIGENCE</p><form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ session.csrf }}"><button class="secondary">Cerrar sesión</button></form></header>
+<h1>Explora los anuncios.<br>Encuentra oportunidades.</h1><p>Facebook y YouTube · búsqueda por palabra clave o anunciante, según el Actor elegido.</p>
+<section><h2>Nueva búsqueda</h2><form id="search"><label for="platform">Plataforma</label><select id="platform"><option value="facebook">Facebook{% if not configured.facebook %} · pendiente de configurar{% endif %}</option><option value="youtube">YouTube{% if not configured.youtube %} · pendiente de configurar{% endif %}</option></select>
+<label for="actor-input">Parámetros de búsqueda</label><p>Introduce el JSON del Actor. Los campos de palabra clave y anunciante se añadirán cuando seleccionemos los Actors.</p><textarea id="actor-input" rows="7" placeholder='{"campo_del_actor": "tu búsqueda"}' required></textarea><p>Cada búsqueda puede consumir crédito de Apify.</p><button id="submit">Buscar anuncios</button></form></section>
+<section><h2>Resultados</h2><p id="status" role="status">Todavía no hay búsquedas.</p><button id="download" hidden>Descargar JSON</button><pre id="results"></pre><p>Vista previa: hasta 100 registros. Usa la CLI para la exportación completa.</p></section>
+</main></body></html>
