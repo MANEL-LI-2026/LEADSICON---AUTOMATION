@@ -87,6 +87,10 @@ def create_app(config=None):
 
     @app.get("/")
     def index():
+        return render_template("studio.html")
+
+    @app.get("/ads")
+    def ads():
         return render_template("index.html", configured={
             p: bool(os.environ.get("APIFY_TOKEN") and os.environ.get(f"APIFY_{p.upper()}_ACTOR"))
             for p in ("facebook", "youtube")

@@ -31,12 +31,15 @@ class WebTests(unittest.TestCase):
 
     def test_private_routes_require_login(self):
         self.assertEqual(self.client.get("/").status_code, 302)
+        self.assertEqual(self.client.get("/ads").status_code, 302)
         self.assertEqual(self.client.post("/api/runs", json={}).status_code, 401)
         self.assertEqual(self.client.get("/api/runs/private-id").status_code, 401)
 
     def test_login_and_logout(self):
         self.assertEqual(self.login().status_code, 302)
         self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertIn(b'UGC Studio', self.client.get("/").data)
+        self.assertEqual(self.client.get("/ads").status_code, 200)
         with self.client.session_transaction() as session:
             token = session["csrf"]
         self.client.post("/logout", data={"csrf": token})
