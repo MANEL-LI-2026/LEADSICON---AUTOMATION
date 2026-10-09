@@ -18,6 +18,7 @@ def create_app(config=None):
     app.config.update(
         SECRET_KEY=os.environ.get("WEB_SESSION_SECRET"),
         PASSWORD_HASH=os.environ.get("WEB_PASSWORD_HASH"),
+        USERNAME=os.environ.get("WEB_USERNAME", "leadsicon"),
         SESSION_COOKIE_SECURE=os.environ.get("WEB_LOCAL_HTTP") != "1",
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
@@ -67,12 +68,16 @@ def create_app(config=None):
                 if len(attempts) >= 10:
                     return render_template("login.html", error="Demasiados intentos. Espera cinco minutos."), 429
                 attempts.append(now)
-            if check_password_hash(app.config["PASSWORD_HASH"], request.form.get("password", "")):
+            password_valid = check_password_hash(app.config["PASSWORD_HASH"], request.form.get("password", ""))
+            username_valid = secrets.compare_digest(
+                request.form.get("username", "").encode(), app.config["USERNAME"].encode()
+            )
+            if username_valid and password_valid:
                 session.clear()
                 session.update(authenticated=True, csrf=secrets.token_urlsafe(32))
                 session.permanent = True
                 return redirect("/")
-            error = "Contraseña incorrecta."
+            error = "Usuario o contraseña incorrectos."
         return render_template("login.html", error=error), 401 if error else 200
 
     @app.post("/logout")

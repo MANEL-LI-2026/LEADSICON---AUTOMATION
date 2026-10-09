@@ -24,6 +24,7 @@ persistente en el servidor: los datasets permanecen en Apify.
    Guarda el hash en los secretos de Render; no lo publiques en GitHub.
    `WEB_SESSION_SECRET` se genera automáticamente y debe conservarse entre
    despliegues para mantener las sesiones.
+   `WEB_USERNAME` define el usuario del login y está configurado como `leadsicon`.
 5. Crea el servicio y espera a que termine el despliegue.
 6. Abre la URL HTTPS que Render asigne: debe aparecer el login. Comprueba
    contraseña incorrecta, acceso correcto y cierre de sesión.

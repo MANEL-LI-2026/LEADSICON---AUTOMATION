@@ -22,7 +22,12 @@ class WebTests(unittest.TestCase):
             return session["csrf"]
 
     def login(self):
-        return self.client.post("/login", data={"csrf": self.csrf(), "password": "test-password"})
+        return self.client.post("/login", data={"csrf": self.csrf(), "username": "leadsicon", "password": "test-password"})
+
+    def test_wrong_username_rejected(self):
+        response = self.client.post("/login", data={"csrf": self.csrf(), "username": "other", "password": "test-password"})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(self.client.get("/").status_code, 302)
 
     def test_private_routes_require_login(self):
         self.assertEqual(self.client.get("/").status_code, 302)
