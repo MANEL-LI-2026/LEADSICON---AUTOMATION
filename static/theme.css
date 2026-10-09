@@ -37,3 +37,4 @@
 [data-theme="light"] .login-page form button{background:#7763dc;color:#fff}
 [data-theme="dark"] .login-page form button{background:#8974ee;color:#fff}
 @media(max-width:600px){.topbar{height:auto;min-height:70px;padding-top:12px;padding-bottom:12px;gap:12px;flex-wrap:wrap}.topbar>div{gap:12px}.theme-toggle{font-size:10px;padding:8px}.ads-page .topbar>span{max-width:none}}
+@media(max-width:800px){.sidebar .logo{flex-shrink:0}.sidebar nav{min-width:0;flex-wrap:wrap;justify-content:flex-end}}

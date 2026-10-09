@@ -11,6 +11,7 @@ from flask import Flask, abort, jsonify, redirect, render_template, request, ses
 from werkzeug.security import check_password_hash
 
 from scraper import ApifyClient
+from kie import chat_models, complete
 
 
 def create_app(config=None):
@@ -95,6 +96,56 @@ def create_app(config=None):
             p: bool(os.environ.get("APIFY_TOKEN") and os.environ.get(f"APIFY_{p.upper()}_ACTOR"))
             for p in ("facebook", "youtube")
         })
+
+    @app.get("/chat")
+    def chat():
+        error = None
+        try:
+            models = chat_models()
+        except RuntimeError as exc:
+            models, error = [], str(exc)
+        return render_template("chat.html", models=models, configuration_error=error,
+                               configured=bool(models and os.environ.get("KIE_API_KEY")))
+
+    @app.post("/api/chat")
+    def chat_reply():
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            return jsonify(error="Envía una conversación válida."), 400
+        messages = body.get("messages")
+        if not isinstance(messages, list) or not 1 <= len(messages) <= 20:
+            return jsonify(error="La conversación debe contener entre 1 y 20 mensajes."), 400
+        total = 0
+        for index, message in enumerate(messages):
+            if (not isinstance(message, dict) or message.get("role") != ("user" if index % 2 == 0 else "assistant")
+                    or not isinstance(message.get("content"), str) or not message["content"].strip()
+                    or len(message["content"]) > 6000):
+                return jsonify(error="Revisa el orden y el tamaño de los mensajes (máximo 6000 caracteres)."), 400
+            total += len(message["content"])
+        if messages[-1]["role"] != "user" or total > 24000:
+            return jsonify(error="Termina con tu pregunta y limita el historial a 24000 caracteres."), 400
+        try:
+            models = chat_models()
+        except RuntimeError as exc:
+            return jsonify(error=str(exc)), 503
+        model = next((model for model in models if model["id"] == body.get("model")), None)
+        if model is None:
+            return jsonify(error="Selecciona un modelo configurado en el servidor."), 400
+        token = os.environ.get("KIE_API_KEY")
+        if not token:
+            return jsonify(error="Configura KIE_API_KEY en los secretos de Render."), 503
+        instruction = (
+            "Eres el asistente de contenido UGC de Leadsicon. Responde en español. "
+            "Ayuda a desarrollar ideas, hooks, guiones y variantes manteniendo el ángulo. "
+            "Pregunta por información necesaria que falte. No inventes resultados, cifras, "
+            "testimonios ni características de la empresa. No afirmes haber producido videos."
+        )
+        safe_messages = [{"role": message["role"], "content": message["content"]} for message in messages]
+        try:
+            reply = complete(model, [{"role": "system", "content": instruction}] + safe_messages, token)
+        except RuntimeError as exc:
+            return jsonify(error=str(exc)), 502
+        return jsonify(content=reply, model=model["id"])
 
     @app.post("/api/runs")
     def start():
