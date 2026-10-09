@@ -8,5 +8,10 @@
 #results{white-space:pre-wrap;overflow-wrap:anywhere;max-height:480px;overflow:auto;color:#53596e;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}
 #results:empty{display:none}
 .studio-link{display:block;text-align:center}
+.keyword-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.keyword-mapping{margin-top:16px;border:1px solid #e0e3ed;border-radius:8px;padding:14px}
+.keyword-mapping summary{cursor:pointer;font-size:12px;font-weight:600}
+.keyword-mapping .outline{margin-top:16px}
+[data-theme="dark"] .keyword-mapping{border-color:#3a4058}
 @media(max-width:800px){.ads-page .topbar>span{max-width:45%;line-height:1.7}.ads-page .topbar>div{gap:12px}}
 @media(max-width:480px){.ads-page nav a:first-child{display:block}.ads-page nav a{font-size:9px;padding:8px 6px}.ads-page .page-heading>.outline{display:inline-block}.ads-actions{align-items:flex-start;flex-direction:column}.ads-actions .primary{width:100%}}

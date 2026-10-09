@@ -4,6 +4,51 @@ const results = document.querySelector('#results');
 const button = document.querySelector('#submit');
 const download = document.querySelector('#download');
 let exportItems = [];
+const keywordPresets = {
+  organic: ['#fyp', '#viral', '#blessing', '#car', '#Challenge'],
+  paid: ['Cheap Insurance', 'Auto Insurance', 'Low Car Insurance Rates', 'Lower your rate'],
+};
+let keywordMode = 'paid';
+const keywordDrafts = Object.fromEntries(Object.entries(keywordPresets).map(([mode, words]) => [mode, words.join('\n')]));
+const keywordInput = document.querySelector('#keywords');
+function keywords() {
+  return [...new Set(keywordInput.value.split('\n').map(value => value.trim()).filter(Boolean))];
+}
+function updateKeywords() {
+  keywordDrafts[keywordMode] = keywordInput.value;
+  document.querySelector('#keyword-count').textContent = `${keywords().length} palabras clave`;
+  document.querySelector('#keyword-feedback').textContent = '';
+}
+keywordInput.addEventListener('input', updateKeywords);
+document.querySelectorAll('[data-keyword-mode]').forEach(tab => tab.addEventListener('click', () => {
+  keywordDrafts[keywordMode] = keywordInput.value;
+  keywordMode = tab.dataset.keywordMode;
+  keywordInput.value = keywordDrafts[keywordMode];
+  document.querySelectorAll('[data-keyword-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.keywordMode === keywordMode)));
+  updateKeywords();
+}));
+document.querySelector('#reset-keywords').addEventListener('click', () => {
+  keywordInput.value = keywordPresets[keywordMode].join('\n');
+  updateKeywords();
+});
+document.querySelector('#apply-keywords').addEventListener('click', () => {
+  const feedback = document.querySelector('#keyword-feedback');
+  const field = document.querySelector('#keyword-field').value.trim();
+  if (!field || ['__proto__', 'constructor', 'prototype'].includes(field) || field.includes('.')) {
+    feedback.textContent = 'Indica un campo de primer nivel válido según la documentación del Actor.'; return;
+  }
+  const words = keywords();
+  if (!words.length) { feedback.textContent = 'Añade al menos una palabra clave.'; return; }
+  const actorInput = document.querySelector('#actor-input');
+  let input;
+  try {
+    input = JSON.parse(actorInput.value.trim() || '{}');
+    if (!input || Array.isArray(input) || typeof input !== 'object') throw new Error();
+  } catch { feedback.textContent = 'Corrige el JSON antes de aplicar las keywords.'; return; }
+  input[field] = document.querySelector('#keyword-format').value === 'array' ? words : words.join('\n');
+  actorInput.value = JSON.stringify(input, null, 2);
+  feedback.textContent = `Aplicadas ${words.length} palabras clave a «${field}». Si las editas después, vuelve a aplicarlas al JSON.`;
+});
 async function api(path, options = {}) {
   const response = await fetch(path, {...options, headers: {'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content}});
   if (response.status === 401) { location.assign('/login'); throw new Error('La sesión expiró.'); }
