@@ -56,14 +56,16 @@ window.AdResults = (() => {
     node.href = url; node.target = '_blank'; node.rel = 'noopener noreferrer';
     return node;
   }
-  function render(container, records, platform) {
+  function render(container, records, platform, options = {}) {
     container.replaceChildren();
     if (!records.length) {
       container.append(element('p', 'ad-empty', 'No se encontraron anuncios para esta búsqueda. Prueba otra keyword, anunciante o país.'));
       return;
     }
-    for (const record of records) {
-      const ad = normalize(record, platform);
+    for (const [index, record] of records.entries()) {
+      let saved = options.entries?.[index];
+      const itemPlatform = saved?.platform || platform;
+      const ad = normalize(record, itemPlatform);
       const card = element('article', 'ad-card');
       const media = element('div', 'ad-media');
       let asset;
@@ -94,6 +96,28 @@ window.AdResults = (() => {
       if (ad.previewUrl) actions.append(link(ad.previewUrl, 'Abrir creativo →'));
       if (ad.destination) actions.append(link(ad.destination, 'Página de destino →'));
       if (!actions.childElementCount) actions.append(element('p', 'hint', 'El proveedor no incluyó enlaces para este registro.'));
+      if (window.LibraryApi) {
+        const favorite = element('button', 'outline', saved?.liked ? '♥ Guardado' : '♡ Guardar');
+        favorite.type = 'button'; favorite.setAttribute('aria-pressed', String(Boolean(saved?.liked)));
+        const message = element('p', 'hint'); message.setAttribute('role', 'status');
+        const detail = element('a', 'outline', 'Ver ficha →');
+        function update() {
+          favorite.textContent = saved?.liked ? '♥ Guardado' : '♡ Guardar';
+          favorite.setAttribute('aria-pressed', String(Boolean(saved?.liked)));
+          if (saved?.id) { detail.href = '/library/' + encodeURIComponent(saved.id); if (!detail.parentNode) actions.append(detail); }
+        }
+        favorite.addEventListener('click', async () => {
+          favorite.disabled = true;
+          try {
+            saved = saved?.id ? await LibraryApi.request('/api/library/ads/' + saved.id + '/like', {liked: !saved.liked}) :
+              await LibraryApi.request('/api/library/ads', {platform: itemPlatform, raw: record, liked: true});
+            update(); message.textContent = saved.liked ? 'Guardado en la biblioteca. Los videos se procesan en segundo plano con el worker activo.' : 'Se quitó de favoritos; el registro permanece en la biblioteca.';
+          } catch (error) { message.textContent = error.message; }
+          finally { favorite.disabled = false; }
+        });
+        actions.append(favorite); update(); content.append(message);
+        if (saved?.kind === 'organic') tags.append(element('span', 'tag', 'Referencia orgánica'));
+      }
       content.append(actions); card.append(content); container.append(card);
     }
   }

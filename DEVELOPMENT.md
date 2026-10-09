@@ -96,3 +96,10 @@ python3 scraper.py --help
 Las pruebas simulan Apify: no consumen crédito ni verifican Actors reales.
 Los inputs de los Actors seleccionados se validaron contra sus esquemas publicados.
 Pendiente: una extracción real con un token válido antes de afirmar que funciona.
+
+## Biblioteca de anuncios
+
+Favoritos, transcripciones de voz/escenas versionadas y cola de archivos están
+en `/library`. Configuración de Supabase, OAuth de Drive personal y worker en
+[docs/LIBRARY.md](docs/LIBRARY.md). Los proveedores de transcripción automática
+y extracción orgánica siguen pendientes; los campos se editan manualmente.

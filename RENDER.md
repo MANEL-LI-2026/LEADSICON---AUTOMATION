@@ -3,8 +3,10 @@
 La web Flask y el backend se despliegan juntos. El archivo `render.yaml`
 define un Web Service de plan Free, un worker y cuatro threads, con HTTPS
 gestionado por Render. El plan gratuito puede suspender el servicio por
-inactividad; revisa sus límites actuales en Render. No se usa almacenamiento
-persistente en el servidor: los datasets permanecen en Apify.
+inactividad; revisa sus límites actuales en Render. Los archivos temporales del servidor no son almacenamiento permanente.
+La biblioteca usa Supabase para datos y Google Drive para archivos: consulta
+[la configuración de la biblioteca](docs/LIBRARY.md). La automatización requiere
+un proceso separado de Background Worker; el worker de Gunicorn solo atiende HTTP.
 
 ## Publicar
 
@@ -55,3 +57,9 @@ límite. Las cookies de sesión requieren HTTPS.
 El health check consulta `/login`. Confirma que la aplicación responde, pero
 no comprueba las credenciales ni la extracción de Apify. Para validar el
 scraper, inicia una búsqueda con el input documentado del Actor elegido.
+
+## Biblioteca persistente
+
+Configura Supabase y OAuth de Google siguiendo [docs/LIBRARY.md](docs/LIBRARY.md).
+Después del despliegue aparece **Biblioteca** en el menú. Sin esas credenciales
+se muestra el estado pendiente; los datos no se guardan de forma permanente.

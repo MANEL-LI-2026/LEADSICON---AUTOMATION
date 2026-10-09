@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash
 from scraper import ApifyClient
 from kie import chat_models, complete
 from ad_inputs import ACTORS, search_plan
+from library_api import register_library
 
 
 def create_app(config=None):
@@ -175,7 +176,15 @@ def create_app(config=None):
         except (RuntimeError, KeyError):
             return jsonify(error="No se pudo confirmar el inicio. Revisa Apify antes de repetir."), 502
         session["runs"] = (session.get("runs", []) + [run["id"]])[-20:]
-        return jsonify(id=run["id"], status=run["status"]), 201
+        result = {"id": run["id"], "status": run["status"]}
+        if app.config.get("DATABASE_URL") or os.environ.get("DATABASE_URL"):
+            try:
+                app.extensions['library_store']().import_run(run['id'], platform, actor, body['input'])
+            except Exception:
+                result['libraryWarning'] = 'La búsqueda empezó, pero no se confirmó su guardado en Supabase. No repitas la búsqueda; revisa la biblioteca.'
+        else:
+            result['libraryWarning'] = 'Falta configurar Supabase; estos resultados aún no se guardan automáticamente en la biblioteca.'
+        return jsonify(result), 201
 
     @app.get("/api/runs/<run_id>")
     def status(run_id):
@@ -195,4 +204,5 @@ def create_app(config=None):
         except (RuntimeError, KeyError):
             return jsonify(error="No se pudo consultar Apify."), 502
 
+    register_library(app)
     return app

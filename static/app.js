@@ -66,6 +66,7 @@ $('search').addEventListener('submit', async event => {
   exportItems = []; $('download').hidden = true; $('results').textContent = '';
   $('status').textContent = 'Preparando búsqueda…';
   let activeRun;
+  const libraryWarnings = new Set();
   try {
     const prepared = await plan();
     for (let index = 0; index < prepared.runs.length; index++) {
@@ -74,6 +75,7 @@ $('search').addEventListener('submit', async event => {
       activeRun = null;
       const run = await api('/api/runs', {method: 'POST', body: JSON.stringify({platform: prepared.platform, input: query.input})});
       activeRun = run.id;
+      if (run.libraryWarning) libraryWarnings.add(run.libraryWarning);
       const deadline = Date.now() + 600000;
       while (true) {
         const current = await api(`/api/runs/${encodeURIComponent(run.id)}`);
@@ -89,7 +91,7 @@ $('search').addEventListener('submit', async event => {
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
-    $('status').textContent = `Completado: ${exportItems.length} registros en la vista previa, ${prepared.runs.length} run(s).`;
+    $('status').textContent = `Completado: ${exportItems.length} registros en la vista previa, ${prepared.runs.length} run(s). ${[...libraryWarnings].join(' ')}`;
   } catch (error) {
     $('status').textContent = `${error.message} ${activeRun ? `Run: ${activeRun}.` : ''} Revisa Apify antes de repetir. Los resultados ya obtenidos se conservan.`;
   } finally {
