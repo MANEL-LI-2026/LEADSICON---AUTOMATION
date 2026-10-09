@@ -22,16 +22,24 @@ class WebTests(unittest.TestCase):
             return session["csrf"]
 
     def login(self):
-        return self.client.post("/login", data={"csrf": self.csrf(), "password": "test-password"})
+        return self.client.post("/login", data={"csrf": self.csrf(), "username": "leadsicon", "password": "test-password"})
+
+    def test_wrong_username_rejected(self):
+        response = self.client.post("/login", data={"csrf": self.csrf(), "username": "other", "password": "test-password"})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(self.client.get("/").status_code, 302)
 
     def test_private_routes_require_login(self):
         self.assertEqual(self.client.get("/").status_code, 302)
+        self.assertEqual(self.client.get("/ads").status_code, 302)
         self.assertEqual(self.client.post("/api/runs", json={}).status_code, 401)
         self.assertEqual(self.client.get("/api/runs/private-id").status_code, 401)
 
     def test_login_and_logout(self):
         self.assertEqual(self.login().status_code, 302)
         self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertIn(b'UGC Studio', self.client.get("/").data)
+        self.assertEqual(self.client.get("/ads").status_code, 200)
         with self.client.session_transaction() as session:
             token = session["csrf"]
         self.client.post("/logout", data={"csrf": token})

@@ -5,6 +5,17 @@ Requiere Python 3.10 o superior, sin paquetes adicionales.
 
 ## Web privada
 
+La pantalla principal (`/`) es el mockup interactivo de **UGC Studio**:
+idea escrita o referencia, concepto, guion, variantes y hoja de ruta.
+El scraper de anuncios permanece en `/ads`. Ambas pantallas requieren login.
+
+El mockup permite edición manual, conservar exactamente el texto original,
+combinar personas/locaciones/formatos (hasta 100 variantes) y exportar el brief
+en JSON. Incluye un ejemplo editable y un borrador guardado en `sessionStorage`,
+solo en la pestaña actual. No existe almacenamiento compartido de proyectos.
+La transcripción contextual, el chat de edición, la generación de guiones,
+la revisión de viralidad y la producción de videos con IA siguen pendientes.
+
 La web usa Flask y requiere las dependencias de `requirements.txt`:
 
 ```sh

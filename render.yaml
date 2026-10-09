@@ -14,5 +14,7 @@ services:
         generateValue: true
       - key: WEB_PASSWORD_HASH
         sync: false
+      - key: WEB_USERNAME
+        value: leadsicon
       - key: WEB_LOCAL_HTTP
         value: "0"
