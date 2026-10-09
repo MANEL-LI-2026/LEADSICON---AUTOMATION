@@ -61,7 +61,7 @@ def transcribe_video(path):
         duration = document.get('duration')
         if type(duration) not in (int, float) or not math.isfinite(duration) or duration <= 0:
             raise ValueError()
-        from library_api import validated_transcript
+        from transcript_validation import validated_transcript
         if not isinstance(document.get('speech'), list) or not isinstance(document.get('scenes'), list):
             raise ValueError()
         speech, scenes, _ = validated_transcript({**document, 'reviewed': False})
@@ -78,3 +78,24 @@ def transcribe_video(path):
         raise TranscriptionUnavailable('No se confirmó el análisis de Hugging Face. Puede seguir activo; revisa el endpoint antes de reintentar.') from None
     except (ValueError, TypeError, KeyError):
         raise TranscriptionUnavailable('Hugging Face no devolvió voz, hablantes y escenas con tiempos válidos. Instala el handler de este repositorio; no sirve un endpoint de Whisper solo.') from None
+
+
+def remote_mode():
+    from transcription import provider_name
+    return provider_name() == 'huggingface' and os.environ.get('HF_PROCESSING_MODE', 'remote') == 'remote'
+
+
+def notify_remote():
+    if not configured():
+        return {'status': 'pending_configuration', 'message': 'Guardado en Supabase. Configura el endpoint de Hugging Face y HF_TOKEN para procesarlo sin worker de Render.'}
+    request = Request(endpoint_url(), data=json.dumps({'inputs': {'action': 'process_pending', 'schema_version': 1}}).encode(),
+                      method='POST', headers={'Authorization': 'Bearer ' + os.environ['HF_TOKEN'], 'Content-Type': 'application/json'})
+    try:
+        with build_opener(NoRedirect()).open(request, timeout=10) as response:
+            result = json.loads(response.read(65536))
+        if not isinstance(result, dict) or result.get('accepted') is not True or result.get('storage') != 'supabase':
+            raise ValueError()
+        return {'status': 'accepted', 'message': 'Guardado en Supabase. Hugging Face procesará el video y guardará la transcripción automáticamente.'}
+    except Exception:
+        # The durable jobs still exist. A timeout never resets/repeats a possibly-running job.
+        return {'status': 'unconfirmed', 'message': 'Guardado en Supabase, pero no se confirmó el aviso a Hugging Face. Revisa su configuración; el endpoint activo recupera la cola automáticamente.'}

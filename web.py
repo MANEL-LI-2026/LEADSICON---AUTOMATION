@@ -180,6 +180,9 @@ def create_app(config=None):
         if app.config.get("DATABASE_URL") or os.environ.get("DATABASE_URL"):
             try:
                 app.extensions['library_store']().import_run(run['id'], platform, actor, body['input'])
+                processing = app.extensions['library_processing_notice']({}).get('processing')
+                if processing and processing['status'] != 'accepted':
+                    result['libraryWarning'] = processing['message']
             except Exception:
                 result['libraryWarning'] = 'La búsqueda empezó, pero no se confirmó su guardado en Supabase. No repitas la búsqueda; revisa la biblioteca.'
         else:

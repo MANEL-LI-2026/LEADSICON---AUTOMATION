@@ -5,8 +5,9 @@ define un Web Service de plan Free, un worker y cuatro threads, con HTTPS
 gestionado por Render. El plan gratuito puede suspender el servicio por
 inactividad; revisa sus límites actuales en Render. Los archivos temporales del servidor no son almacenamiento permanente.
 La biblioteca usa Supabase para datos y Google Drive para archivos: consulta
-[la configuración de la biblioteca](docs/LIBRARY.md). La automatización requiere
-un proceso separado de Background Worker; el worker de Gunicorn solo atiende HTTP.
+[la configuración de la biblioteca](docs/LIBRARY.md). La automatización puede ejecutarse dentro del endpoint de Hugging Face,
+guardando directamente en Supabase, sin un Background Worker de Render. El
+modo anterior de worker separado se conserva para Kie; Gunicorn atiende HTTP.
 
 ## Publicar
 

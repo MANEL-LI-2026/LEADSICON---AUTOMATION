@@ -38,6 +38,14 @@ class EndpointHandler:
         self.vision = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             model_id, torch_dtype=torch.float16, device_map={'': 0}, token=token, use_safetensors=True)
         self.vision.eval()
+        self.remote_processor = None
+        if os.environ.get('DATABASE_URL') and os.environ.get('HF_REMOTE_PROCESSING_ENABLED', '1') == '1':
+            try:
+                from .remote_processor import RemoteProcessor
+            except ImportError:
+                from remote_processor import RemoteProcessor
+            self.remote_processor = RemoteProcessor(self, os.environ['DATABASE_URL'])
+            self.remote_processor.start()
 
     def command(self, args, timeout=120, allow_failure=False):
         result = subprocess.run([self.ffmpeg, '-hide_banner', '-nostdin', '-threads', '2', '-filter_threads', '1', *args],
@@ -63,8 +71,22 @@ class EndpointHandler:
             raise ValueError('No visual description was returned.')
         return output
 
+    def analyze_path(self, path):
+        maximum = int(os.environ.get('HF_MAX_VIDEO_BYTES', str(20 * 1024 * 1024)))
+        with Path(path).open('rb') as handle:
+            video = handle.read(maximum + 1)
+        if len(video) > maximum:
+            return {'error': 'Video exceeds configured size limit.'}
+        return self({'inputs': {'schema_version': 1, 'video_base64': base64.b64encode(video).decode()}})
+
     def __call__(self, data):
         inputs = data.get('inputs') if isinstance(data, dict) else None
+        if isinstance(inputs, dict) and inputs.get('schema_version') == 1 and inputs.get('action') == 'process_pending':
+            processor = getattr(self, 'remote_processor', None)
+            if not processor:
+                return {'error': 'Configure DATABASE_URL on the endpoint for direct Supabase processing.'}
+            processor.notify()
+            return {'schemaVersion': 1, 'accepted': True, 'storage': 'supabase'}
         if not isinstance(inputs, dict) or inputs.get('schema_version') != 1 or not isinstance(inputs.get('video_base64'), str):
             return {'error': 'Expected inputs.video_base64 and schema_version=1.'}
         maximum = int(os.environ.get('HF_MAX_VIDEO_BYTES', str(20 * 1024 * 1024)))

@@ -82,7 +82,7 @@ def download_video(url, asset_id):
         temporary.unlink(missing_ok=True)
 
 
-def process_job(store, job):
+def process_job(store, job, analyzer=None, origin_factory=None):
     payload = job['payload']
     if job['kind'] == 'import_run':
         token = os.environ.get('APIFY_TOKEN')
@@ -149,7 +149,7 @@ def process_job(store, job):
             transcript = db.get(Transcript, payload['transcript_id'])
             transcript.drive_file_id, transcript.drive_url = result['id'], result.get('webViewLink') or 'https://drive.google.com/file/d/' + result['id'] + '/view'
     elif job['kind'] == 'transcribe':
-        origin = analysis_origin(payload['asset_id'])
+        origin = (origin_factory or analysis_origin)(payload['asset_id'])
         with store.session() as db:
             if db.scalar(select(Transcript.id).where(Transcript.ad_id == payload['ad_id'], Transcript.origin == origin)):
                 return True  # A saved analysis is never charged again on a recovered job.
@@ -158,7 +158,7 @@ def process_job(store, job):
                 raise Blocked('No se encontró el video para transcribir.')
             path, source_url, file_id = asset.local_path, asset.source_url, asset.drive_file_id
         from transcription import configured
-        if not configured():
+        if analyzer is None and not configured():
             raise TranscriptionUnavailable(configuration_issue())
         if not path or not Path(path).is_file():
             if file_id:
@@ -169,7 +169,7 @@ def process_job(store, job):
             with store.session.begin() as db:
                 asset = db.get(Asset, payload['asset_id'])
                 asset.local_path, asset.sha256, asset.size = path, sha, size
-        speech, scenes = transcribe_video(path)
+        speech, scenes = (analyzer or transcribe_video)(path)
         store.save_transcript(payload['ad_id'], speech, scenes, reviewed=False, origin=origin)
         # Drive may already hold this video if AI was enabled after its upload.
         if file_id:
@@ -181,12 +181,12 @@ def process_job(store, job):
     return True
 
 
-def run_once(store):
+def run_once(store, analyzer=None, origin_factory=None):
     job = store.claim_job()
     if not job:
         return False
     try:
-        finished = process_job(store, job)
+        finished = process_job(store, job, analyzer=analyzer, origin_factory=origin_factory)
         store.finish_job(job['id'], 'done' if finished else 'pending', delay=0 if finished else 30)
     except (Blocked, DriveUnavailable, TranscriptionUnavailable) as error:
         store.finish_job(job['id'], 'blocked', str(error))

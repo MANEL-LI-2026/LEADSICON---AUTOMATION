@@ -1,6 +1,5 @@
 """Authenticated library routes, registered inside the application's existing session guard."""
 import json
-import math
 import os
 from pathlib import Path
 import re
@@ -14,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from library_store import Ad, Asset, Integration, LibraryStore, Transcript, Run, Job
 from drive_client import DriveClient, DriveUnavailable, connect, oauth_config
 from transcription import TranscriptionUnavailable
+from transcript_validation import validated_transcript
 
 
 class LibraryUnavailable(RuntimeError):
@@ -42,39 +42,6 @@ def connection_failure(error):
     return 'No se pudo inicializar Supabase. La causa puede ser conexión o creación de tablas; revisa la configuración sin compartir DATABASE_URL.'
 
 
-def validated_transcript(body):
-    if not isinstance(body, dict):
-        raise ValueError('Revisa la transcripción.')
-    channels = []
-    for channel in ('speech', 'scenes'):
-        segments = body.get(channel, [])
-        if not isinstance(segments, list) or len(segments) > 200:
-            raise ValueError('Máximo 200 segmentos por capa.')
-        clean = []
-        for segment in segments:
-            if not isinstance(segment, dict):
-                raise ValueError('Revisa los segmentos.')
-            start, end = segment.get('start'), segment.get('end')
-            if (type(start) not in (int, float) or type(end) not in (int, float)
-                    or not math.isfinite(start) or not math.isfinite(end) or start < 0 or end <= start):
-                raise ValueError('Los tiempos deben ser segundos válidos: inicio ≥ 0 y fin > inicio.')
-            field = 'text' if channel == 'speech' else 'description'
-            text = segment.get(field)
-            if not isinstance(text, str) or not text.strip() or len(text) > 6000:
-                raise ValueError('Cada segmento necesita texto (máximo 6000 caracteres).')
-            item = {'start': start, 'end': end, field: text.strip()}
-            if channel == 'speech':
-                speaker = segment.get('speaker', 'Sin identificar')
-                role = segment.get('role', 'unknown')
-                if not isinstance(speaker, str) or not speaker.strip() or len(speaker) > 80 or role not in ('on_camera', 'voiceover', 'unknown'):
-                    raise ValueError('Revisa el hablante y el tipo de voz.')
-                item.update(speaker=speaker.strip(), role=role)
-            clean.append(item)
-        channels.append(sorted(clean, key=lambda segment: segment['start']))
-    if type(body.get('reviewed', False)) is not bool:
-        raise ValueError('El estado revisado debe ser verdadero o falso.')
-    return *channels, body.get('reviewed', False)
-
 
 def register_library(app):
     lock = threading.Lock()
@@ -96,6 +63,14 @@ def register_library(app):
         return store_cache
 
     app.extensions['library_store'] = store
+
+    def processing_notice(item):
+        from hf_transcription import remote_mode, notify_remote
+        if remote_mode():
+            item['processing'] = notify_remote()
+        return item
+
+    app.extensions['library_processing_notice'] = processing_notice
 
     @app.errorhandler(LibraryUnavailable)
     @app.errorhandler(DriveUnavailable)
@@ -147,7 +122,8 @@ def register_library(app):
             with store().session() as db:
                 connected = db.get(Integration, 'google-drive') is not None
         from transcription import configured as transcription_configured, provider_name
-        return jsonify(databaseConfigured=configured, driveConnected=connected, transcriptionProviderConfigured=transcription_configured(), transcriptionProvider=provider_name())
+        from hf_transcription import remote_mode
+        return jsonify(databaseConfigured=configured, driveConnected=connected, transcriptionProviderConfigured=transcription_configured(), transcriptionProvider=provider_name(), processingMode='huggingface' if remote_mode() else 'worker')
 
     @app.post('/api/library/ads')
     def library_save():
@@ -158,7 +134,7 @@ def register_library(app):
             return jsonify(error='Revisa el estado del favorito.'), 400
         try:
             ad_id = store().save_ad(body['platform'], body['raw'], liked=body.get('liked', True))
-            return jsonify(store().get_ad(ad_id)), 201
+            return jsonify(processing_notice(store().get_ad(ad_id))), 201
         except ValueError as error:
             return jsonify(error=str(error)), 400
 
@@ -179,7 +155,7 @@ def register_library(app):
             return jsonify(error='El título debe tener hasta 200 caracteres.'), 400
         ad_id = store().save_ad('facebook', {'organicUrl': body['url'], 'adUrl': body['url'],
                                             'pageName': title or 'Referencia orgánica'}, kind='organic', liked=True)
-        return jsonify(store().get_ad(ad_id)), 201
+        return jsonify(processing_notice(store().get_ad(ad_id))), 201
 
     @app.get('/api/library/ads/<ad_id>')
     def library_ad(ad_id):
@@ -194,7 +170,8 @@ def register_library(app):
         if not isinstance(body, dict) or type(body.get('liked')) is not bool:
             return jsonify(error='Revisa el estado del favorito.'), 400
         try:
-            return jsonify(store().set_like(ad_id, body['liked']))
+            item = store().set_like(ad_id, body['liked'])
+            return jsonify(processing_notice(item) if body['liked'] else item)
         except KeyError:
             abort(404)
 
@@ -224,7 +201,7 @@ def register_library(app):
                     if not asset or asset.ad_id != ad_id:
                         raise ValueError('El video de origen no pertenece a este anuncio.')
                 origin += ':' + source_id
-            return jsonify(store().save_transcript(ad_id, speech, scenes, reviewed, origin=origin))
+            return jsonify(processing_notice(store().save_transcript(ad_id, speech, scenes, reviewed, origin=origin)))
         except ValueError as error:
             return jsonify(error=str(error)), 400
         except KeyError:
@@ -236,7 +213,7 @@ def register_library(app):
             store().get_ad(ad_id)
             store().prepare_assets(ad_id)
             store().retry_jobs(ad_id)
-            return jsonify(store().get_ad(ad_id))
+            return jsonify(processing_notice(store().get_ad(ad_id)))
         except KeyError:
             abort(404)
 

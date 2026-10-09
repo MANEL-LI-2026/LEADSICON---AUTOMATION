@@ -16,7 +16,7 @@
   async function runs() {
     try {
       const data = await LibraryApi.request('/api/library/runs'); const list = document.querySelector('#import-runs'); list.replaceChildren();
-      const states = {pending: 'En cola; requiere worker activo', running: 'Importando', done: 'Importación completa', blocked: 'Bloqueada', failed: 'Error'};
+      const states = {pending: 'En cola para procesamiento automático', running: 'Importando', done: 'Importación completa', blocked: 'Bloqueada', failed: 'Error'};
       for (const run of data.items) {
         const row = document.createElement('li'); row.textContent = `${run.platform} · ${run.id} · ${states[run.status] || run.status}${run.error ? ' · ' + run.error : ''}`;
         if (['blocked','failed'].includes(run.status)) {
@@ -51,7 +51,8 @@
   });
   LibraryApi.request('/api/library/config').then(config => {
     status.textContent = !config.databaseConfigured ? 'Falta configurar DATABASE_URL de Supabase en Render. No se guardan datos de forma permanente hasta conectarla.' :
-      config.driveConnected ? 'Supabase conectada · Drive autorizado. La subida automática necesita el worker activo.' : 'Supabase conectada · Autoriza Google Drive para subir videos automáticamente con el worker activo.';
+      config.processingMode === 'huggingface' ? 'Supabase conectada · Procesamiento en Hugging Face, sin worker de Render.' + (config.driveConnected ? ' Drive autorizado.' : ' Puedes conectar Drive después.') : config.driveConnected ? 'Supabase conectada · Drive autorizado. La subida automática necesita el worker activo.' : 'Supabase conectada · Autoriza Google Drive para subir videos automáticamente con el worker activo.';
+    if (config.processingMode === 'huggingface' && !config.transcriptionProviderConfigured) status.textContent += ' Falta configurar HF_TOKEN y el endpoint en Render.';
     const callback = new URLSearchParams(location.search).get('drive');
     if (callback === 'error') status.textContent = 'No se pudo completar la autorización de Drive. Revisa la configuración OAuth y vuelve a conectar.';
     if (callback === 'cancelled') status.textContent = 'La autorización de Drive fue cancelada.';

@@ -33,7 +33,11 @@ En la biblioteca pulsa **Conectar Google Drive** y autoriza tu cuenta una vez. L
 
 Si la pantalla OAuth externa permanece en modo de prueba, Google puede hacer caducar el refresh token a los siete días para este scope. Configura el estado de publicación apropiado en Google Cloud para la operación continua y revisa los requisitos que indique Google. Los permisos se pueden revocar; en ese caso vuelve a conectar desde la biblioteca.
 
-## 3. Worker para la automatización
+## 3. Dónde se ejecuta la automatización
+
+Para Hugging Face, ahora puede ejecutarse **dentro del endpoint GPU**, leyendo y guardando directamente en Supabase. No requiere un worker separado de Render. Configura `HF_PROCESSING_MODE=remote` en la web y la misma `DATABASE_URL` en el endpoint. Mantén una réplica activa sin escalado a cero. Paquete y configuración completa en [la guía de Hugging Face](../integrations/huggingface/README.md). La web puede cerrar o suspenderse después de guardar el favorito; el endpoint sigue procesando la cola mientras esté activo.
+
+El modo de worker separado que sigue a continuación se conserva para Kie o `HF_PROCESSING_MODE=worker`.
 
 El servicio web de `render.yaml` continúa en plan Free. Su worker Gunicorn atiende HTTP; **no es un Background Worker** para archivos. No se ha creado ni contratado un servicio adicional.
 

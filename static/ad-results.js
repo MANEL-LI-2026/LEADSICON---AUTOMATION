@@ -112,7 +112,7 @@ window.AdResults = (() => {
             saved = saved?.id ? await LibraryApi.request('/api/library/ads/' + saved.id + '/like', {liked: !saved.liked}) :
               await LibraryApi.request('/api/library/ads', {platform: itemPlatform, raw: record, liked: true});
             options.onSaved?.(index, saved);
-            update(); message.textContent = saved.liked ? 'Guardado en la biblioteca. Los videos se procesan en segundo plano con el worker activo.' : 'Se quitó de favoritos; el registro permanece en la biblioteca.';
+            update(); message.textContent = saved.liked ? saved.processing?.message || 'Guardado en la biblioteca. El procesamiento automático continúa en segundo plano cuando el servicio está activo.' : 'Se quitó de favoritos; el registro permanece en la biblioteca.';
           } catch (error) { message.textContent = error.message; }
           finally { favorite.disabled = false; }
         });

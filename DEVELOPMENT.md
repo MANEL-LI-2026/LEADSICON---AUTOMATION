@@ -123,3 +123,9 @@ Hugging Face está disponible como proveedor de transcripción, diarización y
 descripciones visuales mediante un endpoint GPU protegido. Guía y handler en
 [integrations/huggingface/README.md](integrations/huggingface/README.md). Sus
 dependencias están separadas: no se instalan en el backend de Render.
+
+El modo `HF_PROCESSING_MODE=remote` permite procesar dentro del endpoint de
+Hugging Face y guardar directamente en la misma Supabase, sin Background Worker
+de Render. El endpoint debe mantener una réplica activa y recibir su conexión
+privada de base de datos. La guía y `build_bundle.py` incluyen el paquete
+completo; los modelos GPU reales siguen pendientes de validación.

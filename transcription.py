@@ -136,7 +136,7 @@ def transcribe_kie_video(path):
         if not isinstance(document, dict) or not isinstance(document.get('speech'), list) or not isinstance(document.get('scenes'), list):
             raise ValueError()
         # Apply exactly the same strict timestamp/speaker validation as edited transcripts.
-        from library_api import validated_transcript
+        from transcript_validation import validated_transcript
         speech, scenes, _ = validated_transcript({**document, 'reviewed': False})
         if not scenes:
             raise ValueError()

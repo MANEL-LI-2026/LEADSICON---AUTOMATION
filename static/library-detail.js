@@ -53,7 +53,7 @@
         if (asset.available || asset.driveUrl) {
           const download = node('a', '↓ Descargar video', 'outline'); download.href = '/api/library/assets/' + asset.id + '/media?download=1'; paragraph.append(download);
           if ((initial || video.hidden || asset.driveUrl && !video.src.includes('/api/library/assets/')) && index === 0) { video.src = '/api/library/assets/' + asset.id + '/media'; video.hidden = false; }
-        } else paragraph.append(node('span', asset.downloaded ? 'Descargado en el worker · pendiente de Drive' : 'Descarga pendiente'));
+        } else paragraph.append(node('span', asset.downloaded ? 'Descargado para análisis · pendiente de Drive' : 'Descarga pendiente'));
         if (asset.driveUrl) { const link = node('a', 'Abrir en Drive →', 'outline'); link.href = AdResults.safeUrl(asset.driveUrl); link.target = '_blank'; link.rel = 'noopener noreferrer'; paragraph.append(link); }
         assets.append(paragraph);
       }
@@ -63,7 +63,7 @@
       const jobs = document.querySelector('#job-list'); jobs.replaceChildren();
       for (const job of item.jobs) jobs.append(node('li', `${kinds[job.kind] || job.kind}: ${states[job.status] || job.status}${job.error ? ' · ' + job.error : ''}`));
       if (!item.jobs.length) jobs.append(node('li', 'Sin tareas de archivos en cola.'));
-      status.textContent = item.transcript ? `Transcripción versión ${item.transcript.version} · ${item.transcript.reviewed ? 'Revisada' : 'Pendiente de revisión'}.` : 'Transcripción automática pendiente. Revisa el estado del worker y la configuración del proveedor de transcripción.';
+      status.textContent = item.transcript ? `Transcripción versión ${item.transcript.version} · ${item.transcript.reviewed ? 'Revisada' : 'Pendiente de revisión'}.` : 'Transcripción automática pendiente. Revisa el servicio de procesamiento y la configuración del proveedor de transcripción.';
       document.querySelector('#editing-version').textContent = item.transcript ? `Corrección de la última versión guardada (${item.transcript.version}). El selector superior permite consultar las anteriores.` : 'La transcripción aparecerá automáticamente; las correcciones son opcionales.';
       if (!dirty && editorVersion !== (item.transcript?.version || 0)) {
         document.querySelector('#speech-rows').replaceChildren(); document.querySelector('#scene-rows').replaceChildren();
@@ -78,7 +78,7 @@
   document.querySelector('#refresh-detail').addEventListener('click', () => load());
   document.querySelector('#retry-jobs').addEventListener('click', async event => {
     event.target.disabled = true;
-    try { await LibraryApi.request(endpoint + '/retry', {}); await load(); status.textContent = 'Tareas pendientes reenviadas a la cola. Se ejecutarán con el worker activo.'; }
+    try { await LibraryApi.request(endpoint + '/retry', {}); await load(); status.textContent = 'Tareas pendientes reenviadas a la cola. Se ejecutarán cuando el servicio de procesamiento esté activo.'; }
     catch (error) { status.textContent = error.message; } finally { event.target.disabled = false; }
   });
   document.querySelector('#transcript-form').addEventListener('submit', async event => {
@@ -87,7 +87,7 @@
     for (const [channel, selector] of [['speech', '#speech-rows'], ['scenes', '#scene-rows']]) {
       payload[channel] = [...document.querySelector(selector).children].map(row => Object.fromEntries([...row.querySelectorAll('[data-field]')].map(input => [input.dataset.field, ['start','end'].includes(input.dataset.field) ? Number(input.value) : input.value])));
     }
-    try { const saved = await LibraryApi.request(endpoint + '/transcript', payload); document.querySelector('#transcript-status').textContent = `Versión ${saved.transcript.version} guardada en Supabase. Su archivo se subirá a Drive con el worker activo y Drive conectado.`; dirty = false; selectedVersion = saved.transcript.id; await load(); }
+    try { const saved = await LibraryApi.request(endpoint + '/transcript', payload); document.querySelector('#transcript-status').textContent = `Versión ${saved.transcript.version} guardada en Supabase. Su archivo se subirá a Drive cuando el procesamiento y Drive estén conectados.`; dirty = false; selectedVersion = saved.transcript.id; await load(); }
     catch (error) { document.querySelector('#transcript-status').textContent = error.message; }
     finally { button.disabled = false; }
   });
@@ -104,7 +104,7 @@
     if (!transcript) {
       const jobs = currentItem?.jobs.filter(job => ['download','transcribe'].includes(job.kind)) || [];
       const issue = jobs.find(job => ['blocked','failed'].includes(job.status));
-      automaticStatus.textContent = issue?.error || 'La transcripción aparecerá aquí automáticamente cuando el worker termine. No necesitas escribirla.';
+      automaticStatus.textContent = issue?.error || 'La transcripción aparecerá aquí automáticamente cuando termine el análisis. No necesitas escribirla.';
       timeline.append(node('p', 'Aún no hay segmentos disponibles.', 'hint')); return;
     }
     automaticStatus.textContent = transcript.origin.startsWith('hf:') || transcript.origin.startsWith('kie:') ? 'Transcripción automática · ' + (transcript.origin.startsWith('hf:') ? 'Hugging Face · ' : 'Kie / Gemini · ') + (transcript.reviewed ? 'Revisada por el equipo' : 'Pendiente de revisión') : 'Transcripción revisada o escrita por el equipo.';
