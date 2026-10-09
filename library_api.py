@@ -19,6 +19,28 @@ class LibraryUnavailable(RuntimeError):
     pass
 
 
+def connection_failure(error):
+    # Inspect internally, return only fixed messages; never expose URLs or provider errors.
+    original = getattr(error, 'orig', error)
+    state = getattr(original, 'sqlstate', None)
+    detail = str(original).lower()
+    if state in ('28P01', '28000') or 'password authentication failed' in detail:
+        return 'Supabase rechazó el usuario o la contraseña. Revisa la contraseña de la base de datos y su codificación en DATABASE_URL.'
+    if 'tenant or user not found' in detail:
+        return 'El pooler no reconoce el proyecto o usuario. Copia el host y usuario exactos desde Connect → Session pooler de tu proyecto.'
+    if state == '42501' or 'permission denied' in detail or 'must be owner' in detail:
+        return 'Se alcanzó Supabase, pero faltan permisos para crear tablas o activar RLS. Usa la conexión PostgreSQL del propietario del proyecto.'
+    if 'could not translate host name' in detail or 'name or service not known' in detail or 'failed to resolve' in detail:
+        return 'No se pudo resolver el servidor de Supabase. Revisa el host de Session pooler y que el proyecto esté activo.'
+    if 'timeout' in detail or 'timed out' in detail or 'connection refused' in detail or 'network is unreachable' in detail:
+        return 'No se pudo alcanzar Supabase. Comprueba que el proyecto esté activo y las restricciones de red permitan la conexión desde Render.'
+    if 'ssl' in detail or 'certificate' in detail:
+        return 'Falló la conexión TLS a Supabase. Usa la cadena oficial con sslmode=require.'
+    if isinstance(error, (ValueError, TypeError)) or 'could not parse' in detail:
+        return 'DATABASE_URL tiene un formato inválido. Usa una URL PostgreSQL sin comillas y codifica los caracteres especiales de la contraseña.'
+    return 'No se pudo inicializar Supabase. La causa puede ser conexión o creación de tablas; revisa la configuración sin compartir DATABASE_URL.'
+
+
 def validated_transcript(body):
     if not isinstance(body, dict):
         raise ValueError('Revisa la transcripción.')
@@ -68,8 +90,8 @@ def register_library(app):
             if store_cache is None:
                 try:
                     store_cache = LibraryStore(url)
-                except Exception:
-                    raise LibraryUnavailable('No se pudo conectar Supabase. Revisa DATABASE_URL sin compartir su valor.') from None
+                except Exception as error:
+                    raise LibraryUnavailable(connection_failure(error)) from None
         return store_cache
 
     app.extensions['library_store'] = store

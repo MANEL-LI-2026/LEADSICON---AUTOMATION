@@ -119,7 +119,8 @@ class LibraryStore:
             url = 'postgresql+psycopg://' + url[len('postgres://'):]
         elif url.startswith('postgresql://'):
             url = 'postgresql+psycopg://' + url[len('postgresql://'):]
-        self.engine = create_engine(url, pool_pre_ping=True)
+        self.engine = create_engine(url, pool_pre_ping=True,
+                                    connect_args={'connect_timeout': 10} if url.startswith('postgresql') else {})
         Base.metadata.create_all(self.engine)
         if self.engine.dialect.name == 'postgresql':
             with self.engine.begin() as connection:

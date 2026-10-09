@@ -7,6 +7,7 @@ from unittest.mock import patch, MagicMock
 from sqlalchemy import select
 from werkzeug.security import generate_password_hash
 from web import create_app
+from library_api import connection_failure
 from library_store import LibraryStore, Job, Integration, Asset
 from library_worker import run_once, valid_video_url, download_video, Blocked
 from drive_client import connect, cipher, DriveClient
@@ -55,6 +56,18 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(anonymous.get('/library').status_code, 302)
         self.assertEqual(self.client.post('/api/library/ads', json={}).status_code, 403)
         self.assertEqual(self.client.get('/library').status_code, 200)
+
+    def test_connection_diagnostics_never_expose_credentials(self):
+        secret = 'postgresql://user:PRIVATE-PASSWORD@private-host/db'
+        for detail, expected in [('password authentication failed', 'rechazó'),
+                                 ('Tenant or user not found', 'no reconoce'),
+                                 ('permission denied', 'permisos'),
+                                 ('connection timeout expired', 'alcanzar'),
+                                 ('could not translate host name', 'resolver')]:
+            message = connection_failure(RuntimeError(detail + ' ' + secret))
+            self.assertIn(expected, message)
+            self.assertNotIn('PRIVATE-PASSWORD', message)
+            self.assertNotIn('private-host', message)
 
     def test_missing_database_never_claims_saved(self):
         app = create_app({'TESTING': True, 'SECRET_KEY': 'test', 'PASSWORD_HASH': self.password_hash, 'SESSION_COOKIE_SECURE': False})
