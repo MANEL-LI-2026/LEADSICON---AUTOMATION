@@ -1,0 +1,15 @@
+.ambient-scene{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict}
+.ambient-light{position:absolute;width:65vmax;height:65vmax;border-radius:50%;opacity:.65;will-change:transform}
+.ambient-light-1{top:-35vmax;left:-18vmax;background:radial-gradient(circle,#87cddd99,transparent 65%);animation:ambient-drift-one 28s ease-in-out infinite alternate}
+.ambient-light-2{top:5vh;right:-30vmax;background:radial-gradient(circle,#aaa2e699,transparent 65%);animation:ambient-drift-two 34s ease-in-out infinite alternate}
+.ambient-light-3{bottom:-36vmax;left:18vw;background:radial-gradient(circle,#91d7ba88,transparent 65%);animation:ambient-drift-three 31s ease-in-out infinite alternate}
+html[data-theme] body{position:relative;isolation:isolate}
+html[data-theme] body:not(.login-page),html[data-theme] .login-page{background:transparent}
+html[data-theme="dark"] .ambient-light{opacity:.45}
+html[data-theme="dark"] .ambient-light-1{background:radial-gradient(circle,#438cae99,transparent 65%)}
+html[data-theme="dark"] .ambient-light-2{background:radial-gradient(circle,#6d62b499,transparent 65%)}
+html[data-theme="dark"] .ambient-light-3{background:radial-gradient(circle,#32867988,transparent 65%)}
+@keyframes ambient-drift-one{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(25vw,35vh,0) scale(1.2)}}
+@keyframes ambient-drift-two{from{transform:translate3d(0,0,0) scale(1.12)}to{transform:translate3d(-32vw,18vh,0) scale(.9)}}
+@keyframes ambient-drift-three{from{transform:translate3d(0,0,0) scale(.95)}to{transform:translate3d(-20vw,-30vh,0) scale(1.25)}}
+@media(prefers-reduced-motion:reduce){.ambient-light{animation:none;will-change:auto}}
