@@ -144,7 +144,8 @@ def register_library(app):
         if configured:
             with store().session() as db:
                 connected = db.get(Integration, 'google-drive') is not None
-        return jsonify(databaseConfigured=configured, driveConnected=connected, transcriptionProviderConfigured=False)
+        from transcription import configured as transcription_configured
+        return jsonify(databaseConfigured=configured, driveConnected=connected, transcriptionProviderConfigured=transcription_configured())
 
     @app.post('/api/library/ads')
     def library_save():
@@ -195,11 +196,33 @@ def register_library(app):
         except KeyError:
             abort(404)
 
+    @app.get('/api/library/ads/<ad_id>/transcripts')
+    def library_versions(ad_id):
+        try:
+            store().get_ad(ad_id)
+        except KeyError:
+            abort(404)
+        with store().session() as db:
+            versions = db.scalars(select(Transcript).where(Transcript.ad_id == ad_id)
+                                  .order_by(Transcript.version.desc()).limit(100)).all()
+            return jsonify(items=[store().transcript_json(version) for version in versions])
+
     @app.post('/api/library/ads/<ad_id>/transcript')
     def library_transcript(ad_id):
         try:
-            speech, scenes, reviewed = validated_transcript(request.get_json(silent=True))
-            return jsonify(store().save_transcript(ad_id, speech, scenes, reviewed))
+            body = request.get_json(silent=True)
+            speech, scenes, reviewed = validated_transcript(body)
+            source_id = body.get('sourceAssetId')
+            origin = 'manual'
+            if source_id is not None:
+                if not isinstance(source_id, str):
+                    raise ValueError('Revisa el video de origen de la transcripción.')
+                with store().session() as db:
+                    asset = db.get(Asset, source_id)
+                    if not asset or asset.ad_id != ad_id:
+                        raise ValueError('El video de origen no pertenece a este anuncio.')
+                origin += ':' + source_id
+            return jsonify(store().save_transcript(ad_id, speech, scenes, reviewed, origin=origin))
         except ValueError as error:
             return jsonify(error=str(error)), 400
         except KeyError:

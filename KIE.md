@@ -13,10 +13,11 @@ Bearer, `model`, `messages`, `stream: false`, y lectura de
 `choices[0].message.content`. No implementa endpoints de tareas asíncronas,
 la API nativa de Anthropic ni la API nativa de Gemini.
 
-La documentación oficial es https://docs.kie.ai/. Su acceso desde el entorno
-de desarrollo está bloqueado por la política de red. Las rutas y modelos
-concretos aún deben verificarse en esa documentación. Las pruebas actuales
-simulan el proveedor: no prueban una conexión real ni consumen crédito.
+La documentación oficial es https://docs.kie.ai/. Se verificó la ruta multimodal
+de Gemini 2.5 Pro y la subida por stream para la transcripción del worker. Los
+demás modelos del chat deben usar endpoints compatibles con este adaptador;
+las APIs nativas y las rutas Responses requieren adaptadores separados. Las
+pruebas simulan el proveedor: no prueban una conexión real ni consumen crédito.
 
 ## Configurar en Render
 
@@ -60,3 +61,9 @@ petición fallida o que agota la espera puede haber consumido crédito.
 
 Antes de declarar la integración lista, hay que verificar los endpoints
 oficiales, configurar una clave válida y completar una conversación real.
+
+## Transcripción automática de favoritos
+
+El worker analiza audio y escenas con Gemini 2.5 Pro vía Kie, usando `KIE_API_KEY`
+y una ruta fija verificada. No requiere configurar el catálogo del chat.
+Consulta [docs/LIBRARY.md](docs/LIBRARY.md) para activación, costos y privacidad.

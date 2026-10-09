@@ -104,6 +104,16 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(len(knowledge[0]['transcript']['scenes']), 1)
         self.assertEqual(self.client.get('/api/library/ads/' + item['id'] + '/export').status_code, 200)
 
+    def test_manual_correction_preserves_owned_video_source(self):
+        item = self.save({'adArchiveId': 'source', 'videoUrl': 'https://cdn.fbcdn.net/source.mp4'})
+        asset_id = item['assets'][0]['id']
+        body = {'sourceAssetId': asset_id, 'scenes': [{'start': 0, 'end': 2, 'description': 'Escena revisada'}]}
+        saved = self.post('/api/library/ads/' + item['id'] + '/transcript', body)
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.get_json()['transcript']['sourceAssetId'], asset_id)
+        other = self.save({'adArchiveId': 'other'})
+        self.assertEqual(self.post('/api/library/ads/' + other['id'] + '/transcript', body).status_code, 400)
+
     def test_invalid_times_and_empty_review_rejected(self):
         item = self.save(); path = '/api/library/ads/' + item['id'] + '/transcript'
         for start, end in [(2, 1), (-1, 3), (float('nan'), 3), (True, 3)]:
@@ -140,17 +150,18 @@ class LibraryTests(unittest.TestCase):
         file = Path(self.directory.name) / 'file.mp4'; file.write_bytes(b'media')
         with patch('library_worker.download_video', return_value=(str(file), 'sha', 5)):
             self.assertTrue(run_once(self.store))
+        with patch.dict(os.environ, {'KIE_TRANSCRIPTION_ENABLED': '0'}):
+            self.assertTrue(run_once(self.store))
         with patch('library_worker.DriveClient.from_store') as drive:
             drive.return_value.upload.return_value = {'id': 'drive-id', 'webViewLink': 'https://drive.google.com/file/d/drive-id/view'}
             self.assertTrue(run_once(self.store))
         self.assertFalse(file.exists())
-        self.assertTrue(run_once(self.store))
         updated = self.store.get_ad(item['id'])
         self.assertIsNotNone(updated['assets'][0]['driveUrl'])
-        self.assertEqual([j['status'] for j in updated['jobs']], ['done', 'done', 'blocked'])
+        self.assertEqual([j['status'] for j in updated['jobs']], ['done', 'blocked', 'done'])
         self.assertIsNone(updated['transcript'])
         self.post('/api/library/ads/' + item['id'] + '/retry', {})
-        self.assertEqual(self.store.get_ad(item['id'])['jobs'][-1]['status'], 'pending')
+        self.assertEqual(self.store.get_ad(item['id'])['jobs'][1]['status'], 'pending')
 
     def test_expired_lease_recovered_and_job_not_claimed_twice(self):
         self.store.enqueue('test', 'one', {})

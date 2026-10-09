@@ -5,11 +5,13 @@ import json
 import os
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlencode, urlsplit, quote
 from urllib.request import Request, urlopen
 from cryptography.fernet import Fernet
 from sqlalchemy import update
 from library_store import Integration, Job
+from kie import NoRedirect
+from urllib.request import build_opener
 
 
 class DriveUnavailable(RuntimeError):
@@ -102,6 +104,35 @@ class DriveClient:
             return found[0]['id']
         return self.request('files', {'name': 'Leadsicon UGC', 'mimeType': 'application/vnd.google-apps.folder',
                                      'appProperties': {'leadsicon': 'ugc-library'}})['id']
+
+    def download(self, file_id, destination):
+        path = Path(destination)
+        temporary = path.with_suffix('.part')
+        maximum = int(os.environ.get('MAX_MEDIA_BYTES', str(200 * 1024 * 1024)))
+        cache_limit = int(os.environ.get('MAX_MEDIA_CACHE_BYTES', str(1024 * 1024 * 1024)))
+        maximum = min(maximum, cache_limit - sum(item.stat().st_size for item in path.parent.glob('*.mp4')))
+        digest, size = hashlib.sha256(), 0
+        try:
+            request = Request('https://www.googleapis.com/drive/v3/files/' + quote(file_id, safe='') + '?alt=media',
+                              headers={'Authorization': 'Bearer ' + self.token})
+            with build_opener(NoRedirect()).open(request, timeout=30) as response, temporary.open('wb') as handle:
+                if int(response.headers.get('Content-Length', '0')) > maximum:
+                    raise DriveUnavailable('El archivo de Drive supera el límite de caché local.')
+                while chunk := response.read(1024 * 1024):
+                    if size == 0 and (len(chunk) < 12 or chunk[4:8] != b'ftyp'):
+                        raise DriveUnavailable('Drive no entregó un MP4 reconocido.')
+                    size += len(chunk)
+                    if size > maximum:
+                        raise DriveUnavailable('El archivo de Drive supera el límite de caché local.')
+                    digest.update(chunk); handle.write(chunk)
+            if not size:
+                raise DriveUnavailable('El video de Drive está vacío.')
+            temporary.replace(path)
+            return digest.hexdigest(), size
+        except (HTTPError, URLError, TimeoutError, ValueError, OSError):
+            raise DriveUnavailable('No se pudo recuperar el video privado de Drive para transcribirlo.') from None
+        finally:
+            temporary.unlink(missing_ok=True)
 
     def upload(self, path, name, mime, key):
         if not self.folder_id:

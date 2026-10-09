@@ -10,9 +10,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from sqlalchemy import select
-from library_store import Asset, LibraryStore, Transcript
+from library_store import Asset, LibraryStore, Transcript, Job
 from drive_client import DriveClient, DriveUnavailable
 from scraper import ApifyClient
+from transcription import transcribe_video, TranscriptionUnavailable, MODEL
 
 
 class Blocked(RuntimeError):
@@ -113,10 +114,13 @@ def process_job(store, job):
             with store.session.begin() as db:
                 asset = db.get(Asset, asset_id)
                 asset.local_path, asset.sha256, asset.size = path, sha, size
-        store.enqueue('drive_video', 'drive:' + asset_id, {'asset_id': asset_id, 'ad_id': payload['ad_id']})
         store.enqueue('transcribe', 'transcribe:' + asset_id, {'asset_id': asset_id, 'ad_id': payload['ad_id']})
+        store.enqueue('drive_video', 'drive:' + asset_id, {'asset_id': asset_id, 'ad_id': payload['ad_id']})
     elif job['kind'] == 'drive_video':
         with store.session() as db:
+            transcription = db.scalar(select(Job).where(Job.key == 'transcribe:' + payload['asset_id']))
+            if transcription and transcription.status in ('pending', 'running'):
+                return False
             asset = db.get(Asset, payload['asset_id'])
             path, asset_id, source_url = asset.local_path, asset.id, asset.source_url
         if not path or not Path(path).is_file():
@@ -145,7 +149,33 @@ def process_job(store, job):
             transcript = db.get(Transcript, payload['transcript_id'])
             transcript.drive_file_id, transcript.drive_url = result['id'], result.get('webViewLink') or 'https://drive.google.com/file/d/' + result['id'] + '/view'
     elif job['kind'] == 'transcribe':
-        raise Blocked('Proveedor de transcripción de voz y análisis de escenas pendiente de elegir/conectar. Puedes editar ambas capas manualmente.')
+        origin = 'kie:' + MODEL + ':' + payload['asset_id']
+        with store.session() as db:
+            if db.scalar(select(Transcript.id).where(Transcript.ad_id == payload['ad_id'], Transcript.origin == origin)):
+                return True  # A saved analysis is never charged again on a recovered job.
+            asset = db.get(Asset, payload['asset_id'])
+            if not asset:
+                raise Blocked('No se encontró el video para transcribir.')
+            path, source_url, file_id = asset.local_path, asset.source_url, asset.drive_file_id
+        from transcription import configured
+        if not configured():
+            raise TranscriptionUnavailable('Configura KIE_API_KEY en el worker para transcribir automáticamente. KIE_TRANSCRIPTION_ENABLED=0 desactiva el análisis.')
+        if not path or not Path(path).is_file():
+            if file_id:
+                path = str(media_dir() / (payload['asset_id'] + '.mp4'))
+                sha, size = DriveClient.from_store(store).download(file_id, path)
+            else:
+                path, sha, size = download_video(source_url, payload['asset_id'])
+            with store.session.begin() as db:
+                asset = db.get(Asset, payload['asset_id'])
+                asset.local_path, asset.sha256, asset.size = path, sha, size
+        speech, scenes = transcribe_video(path)
+        store.save_transcript(payload['ad_id'], speech, scenes, reviewed=False, origin=origin)
+        # Drive may already hold this video if AI was enabled after its upload.
+        if file_id:
+            with store.session.begin() as db:
+                db.get(Asset, payload['asset_id']).local_path = None
+            Path(path).unlink(missing_ok=True)
     else:
         raise Blocked('Tipo de tarea no configurado.')
     return True
@@ -158,12 +188,23 @@ def run_once(store):
     try:
         finished = process_job(store, job)
         store.finish_job(job['id'], 'done' if finished else 'pending', delay=0 if finished else 30)
-    except (Blocked, DriveUnavailable) as error:
+    except (Blocked, DriveUnavailable, TranscriptionUnavailable) as error:
         store.finish_job(job['id'], 'blocked', str(error))
     except Exception:
         # Never log provider bodies, connection strings, tokens or raw exceptions.
         store.finish_job(job['id'], 'failed', 'No se pudo completar la tarea. Revisa la configuración y reintenta.')
     return True
+
+
+def resume_configured_transcriptions(store):
+    from transcription import configured
+    if not configured():
+        return
+    with store.session.begin() as db:
+        jobs = db.scalars(select(Job).where(Job.kind == 'transcribe', Job.status == 'blocked')).all()
+        for job in jobs:
+            if job.error and (job.error.startswith('Configura KIE_API_KEY') or job.error.startswith('Proveedor de transcripción de voz')):
+                job.status, job.error, job.available_at = 'pending', None, 0
 
 
 def main():
@@ -177,6 +218,7 @@ def main():
         store = LibraryStore(url)
     except Exception:
         raise SystemExit('No se pudo conectar la base de datos. Revisa DATABASE_URL.') from None
+    resume_configured_transcriptions(store)
     while True:
         processed = run_once(store)
         if args.once:

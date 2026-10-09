@@ -101,5 +101,20 @@ Pendiente: una extracción real con un token válido antes de afirmar que funcio
 
 Favoritos, transcripciones de voz/escenas versionadas y cola de archivos están
 en `/library`. Configuración de Supabase, OAuth de Drive personal y worker en
-[docs/LIBRARY.md](docs/LIBRARY.md). Los proveedores de transcripción automática
-y extracción orgánica siguen pendientes; los campos se editan manualmente.
+[docs/LIBRARY.md](docs/LIBRARY.md). La transcripción automática está integrada con Kie / Gemini 2.5 Pro y requiere
+`KIE_API_KEY` en el worker; las pruebas simulan el proveedor. La extracción
+orgánica sigue pendiente. La interfaz conserva búsquedas en la pestaña y ofrece
+resultados paginados, seguimiento animado y superficies glass en la paleta original.
+
+Prueba de navegador offline (requiere Node, Playwright y Chromium en
+`/usr/bin/chromium`):
+
+```sh
+/workspace/.venvs/leadsicon/bin/python tests/browser/run_scraper.py
+```
+
+Arranca y detiene su propio servidor de prueba en `127.0.0.1:5094` con SQLite
+temporal y credenciales ficticias. Simula Apify: no inicia Actors reales.
+Verifica restauración de búsqueda en curso al navegar, paginación, ausencia de
+runs duplicados, favoritos, transcripciones, correcciones y modos claro/oscuro
+en móvil. Guarda capturas en `/tmp/leadsicon-search-*.png`.

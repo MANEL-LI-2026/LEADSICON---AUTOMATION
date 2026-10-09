@@ -1,4 +1,5 @@
 """Persistent ad library and durable job queue (PostgreSQL in production)."""
+from pathlib import Path
 from functools import wraps
 import hashlib
 import json
@@ -196,6 +197,7 @@ class LibraryStore:
             return {'id': ad.id, 'platform': ad.platform, 'kind': ad.kind, 'raw': ad.raw,
                     'liked': ad.liked, 'createdAt': ad.created_at,
                     'assets': [{'id': a.id, 'driveUrl': a.drive_url, 'downloaded': bool(a.sha256),
+                                'sourceUrl': a.source_url, 'available': bool(a.drive_file_id or a.local_path and Path(a.local_path).is_file()),
                                 'sha256': a.sha256, 'size': a.size} for a in assets],
                     'jobs': [{'id': j.id, 'kind': j.kind, 'status': j.status, 'error': j.error} for j in relevant],
                     'transcript': None if not transcript else self.transcript_json(transcript),
@@ -205,7 +207,8 @@ class LibraryStore:
     def transcript_json(transcript):
         return {'id': transcript.id, 'version': transcript.version, 'speech': transcript.speech,
                 'scenes': transcript.scenes, 'reviewed': transcript.reviewed, 'origin': transcript.origin,
-                'createdAt': transcript.created_at, 'driveUrl': transcript.drive_url}
+                'createdAt': transcript.created_at, 'driveUrl': transcript.drive_url,
+                'sourceAssetId': transcript.origin.rsplit(':', 1)[-1] if transcript.origin.startswith(('kie:', 'manual:')) else None}
 
     def list_ads(self, liked_only=False, limit=50, offset=0):
         with self.session() as db:
@@ -226,7 +229,7 @@ class LibraryStore:
         return self.get_ad(ad_id)
 
     @retry_unique_conflict
-    def save_transcript(self, ad_id, speech, scenes, reviewed=False):
+    def save_transcript(self, ad_id, speech, scenes, reviewed=False, origin='manual'):
         if reviewed and not (speech or scenes):
             raise ValueError('Una transcripción vacía no puede marcarse revisada.')
         with self.session.begin() as db:
@@ -234,7 +237,7 @@ class LibraryStore:
                 raise KeyError(ad_id)
             latest = db.scalar(select(Transcript).where(Transcript.ad_id == ad_id).order_by(Transcript.version.desc()))
             transcript = Transcript(id=str(uuid.uuid4()), ad_id=ad_id, version=latest.version + 1 if latest else 1,
-                                    speech=speech, scenes=scenes, reviewed=reviewed, created_at=now(), origin='manual')
+                                    speech=speech, scenes=scenes, reviewed=reviewed, created_at=now(), origin=origin)
             db.add(transcript)
             transcript_id = transcript.id
         self.enqueue('drive_transcript', 'transcript:' + transcript_id, {'transcript_id': transcript_id, 'ad_id': ad_id})

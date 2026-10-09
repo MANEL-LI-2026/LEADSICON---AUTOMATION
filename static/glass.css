@@ -1,0 +1,12 @@
+/* Original lavender/white palette, with translucent surfaces in both themes. */
+:root{--glass-surface:rgba(255,255,255,.78);--glass-line:rgba(229,231,240,.85);--glass-shadow:0 12px 40px rgba(115,101,222,.055);--glass-glow:rgba(119,99,220,.07)}
+:root[data-theme=dark]{--glass-surface:rgba(27,30,43,.82);--glass-line:rgba(66,73,97,.72);--glass-shadow:0 16px 44px rgba(0,0,0,.18);--glass-glow:rgba(137,116,238,.1)}
+body{isolation:isolate}body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 78% 12%,var(--glass-glow),transparent 50%),radial-gradient(ellipse at 18% 80%,var(--glass-glow),transparent 55%)}
+.sidebar,.topbar,.editor,.project-summary,.ad-card,[data-theme=dark] .sidebar,[data-theme=dark] .topbar,[data-theme=dark] .editor,[data-theme=dark] .project-summary,[data-theme=dark] .ad-card{background:var(--glass-surface);border-color:var(--glass-line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.sidebar{z-index:10}.topbar{position:relative;z-index:5}.editor,.project-summary,.ad-card{box-shadow:var(--glass-shadow);border-radius:18px}
+.outline,.primary,.theme-toggle,nav a,nav button,.source-tabs button{transition:background .18s ease,box-shadow .18s ease,transform .18s ease,border-color .18s ease}
+.outline:hover,.theme-toggle:hover{border-color:#a18af4;box-shadow:0 4px 16px var(--glass-glow)}.primary:hover{box-shadow:0 6px 20px rgba(119,99,220,.2);transform:translateY(-1px)}button:active{transform:translateY(1px)}
+nav a:hover{background:var(--glass-glow)}input,textarea,select{transition:border-color .18s ease,box-shadow .18s ease}input:focus,textarea:focus,select:focus{box-shadow:0 0 0 4px var(--glass-glow)}
+.page-heading h1{line-height:1.16}.editor section{animation:glass-appear .32s ease both}.ad-card{animation:glass-appear .3s ease both}.ad-card:nth-child(2n){animation-delay:.04s}.ad-card:nth-child(3n){animation-delay:.08s}
+@keyframes glass-appear{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
